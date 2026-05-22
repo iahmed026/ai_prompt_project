@@ -31,6 +31,7 @@ const state = {
 const el = {
   appShell: document.querySelector('.app-shell'),
   blogView: document.getElementById('blog-view'),
+  aboutView: document.getElementById('about-view'),
   contactView: document.getElementById('contact-view'),
   nicheList: document.getElementById('niche-list'),
   schemaArea: document.getElementById('schema-area'),
@@ -56,7 +57,6 @@ const el = {
   blogAdminView: document.getElementById('blog-admin-view'),
   blogList: document.getElementById('blog-list'),
   blogSearch: document.getElementById('blog-search'),
-  blogAdminOpen: document.getElementById('blog-admin-open'),
   blogPrev: document.getElementById('blog-prev'),
   blogNext: document.getElementById('blog-next'),
   blogPageMeta: document.getElementById('blog-page-meta'),
@@ -165,22 +165,6 @@ function blogUsesWordPress() {
 }
 
 function renderBlogSourceControls() {
-  if (!el.blogAdminOpen) return;
-
-  if (blogUsesWordPress()) {
-    el.blogAdminOpen.innerHTML = `
-      <i data-lucide="external-link"></i>
-      WordPress
-    `;
-    el.blogAdminOpen.title = 'Open WordPress dashboard';
-  } else {
-    el.blogAdminOpen.innerHTML = `
-      <i data-lucide="shield"></i>
-      Admin
-    `;
-    el.blogAdminOpen.title = 'Open blog admin';
-  }
-
   refreshIcons();
 }
 
@@ -587,6 +571,7 @@ function showHomeRoute() {
   setActiveNav('home');
   el.appShell.hidden = false;
   el.blogView.hidden = true;
+  el.aboutView.hidden = true;
   el.contactView.hidden = true;
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -595,14 +580,26 @@ function showBlogShell() {
   setActiveNav('blogs');
   el.appShell.hidden = true;
   el.blogView.hidden = false;
+  el.aboutView.hidden = true;
   el.contactView.hidden = true;
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function showAboutRoute() {
+  setActiveNav('about');
+  el.appShell.hidden = true;
+  el.blogView.hidden = true;
+  el.aboutView.hidden = false;
+  el.contactView.hidden = true;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  refreshIcons();
 }
 
 function showContactRoute() {
   setActiveNav('contact');
   el.appShell.hidden = true;
   el.blogView.hidden = true;
+  el.aboutView.hidden = true;
   el.contactView.hidden = false;
   window.scrollTo({ top: 0, behavior: 'smooth' });
   refreshIcons();
@@ -672,6 +669,11 @@ function handleRoute() {
     return;
   }
 
+  if (route === 'about') {
+    showAboutRoute();
+    return;
+  }
+
   showHomeRoute();
 }
 
@@ -688,6 +690,11 @@ function handleNav(action) {
 
   if (action === 'contact') {
     navigate('contact');
+    return;
+  }
+
+  if (action === 'about') {
+    navigate('about');
   }
 }
 
@@ -1302,18 +1309,6 @@ document.getElementById('cancel-niche').addEventListener('click', () => el.niche
 el.optionForm.addEventListener('submit', saveCustomOption);
 el.nicheForm.addEventListener('submit', saveCustomNiche);
 
-el.blogAdminOpen.addEventListener('click', () => {
-  if (blogUsesWordPress()) {
-    if (state.blogs.wordpressAdminUrl) {
-      window.open(state.blogs.wordpressAdminUrl, '_blank', 'noopener,noreferrer');
-    } else {
-      showToast('WordPress URL is not configured');
-    }
-    return;
-  }
-
-  navigate('blogs/admin');
-});
 document.getElementById('blog-back').addEventListener('click', () => navigate('blogs'));
 document.getElementById('blog-new').addEventListener('click', resetBlogForm);
 el.blogDetailEdit.addEventListener('click', () => {

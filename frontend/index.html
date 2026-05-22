@@ -33,10 +33,10 @@
           <i data-lucide="mail"></i>
           Contact
         </button>
-        <a class="nav-button nav-link" href="/docs" target="_blank" rel="noreferrer">
-          <i data-lucide="file-text"></i>
-          API Docs
-        </a>
+        <button class="nav-button" type="button" data-nav-action="about">
+          <i data-lucide="info"></i>
+          About Us
+        </button>
       </nav>
     </div>
   </header>
@@ -147,10 +147,6 @@
           <i data-lucide="search"></i>
           <input id="blog-search" type="search" autocomplete="off" placeholder="Search titles">
         </label>
-        <button id="blog-admin-open" class="ghost-button" type="button">
-          <i data-lucide="shield"></i>
-          Admin
-        </button>
       </div>
     </header>
 
@@ -264,6 +260,48 @@
           </div>
         </form>
       </div>
+    </section>
+  </main>
+
+  <main id="about-view" class="contact-workspace" hidden>
+    <section class="contact-hero">
+      <div>
+        <div class="section-kicker">About Us</div>
+        <h1>Dagenticx</h1>
+        <p>
+          Dagenticx creates focused AI tools for people who want sharper prompts,
+          clearer workflows, and practical output without unnecessary complexity.
+        </p>
+      </div>
+      <div class="contact-hero-panel" aria-label="Dagenticx about summary">
+        <span class="brand-mark">DX</span>
+        <strong>Prompt Studio</strong>
+        <p>Built for creators, teams, marketers, educators, founders, and operators.</p>
+      </div>
+    </section>
+
+    <section class="contact-grid" aria-label="About highlights">
+      <article class="contact-card">
+        <i data-lucide="target"></i>
+        <div>
+          <h2>Purpose</h2>
+          <p>Help users turn rough ideas into precise prompts that are easier to reuse and improve.</p>
+        </div>
+      </article>
+      <article class="contact-card">
+        <i data-lucide="workflow"></i>
+        <div>
+          <h2>Approach</h2>
+          <p>Blend niche-specific structure, clear constraints, and practical output formats.</p>
+        </div>
+      </article>
+      <article class="contact-card">
+        <i data-lucide="sparkles"></i>
+        <div>
+          <h2>Focus</h2>
+          <p>Build useful AI workflows that feel simple on the surface and thoughtful underneath.</p>
+        </div>
+      </article>
     </section>
   </main>
 
