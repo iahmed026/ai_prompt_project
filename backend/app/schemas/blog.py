@@ -65,4 +65,5 @@ class BlogListResponse(BaseModel):
 class BlogSourceResponse(BaseModel):
     source: str
     wordpress_site_url: str = ""
+    wordpress_api_url: str = ""
     wordpress_admin_url: str = ""

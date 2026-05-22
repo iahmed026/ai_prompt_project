@@ -5,6 +5,7 @@ import math
 import re
 import unicodedata
 from typing import Any, Dict, List, Optional, Tuple
+from urllib.parse import quote, urlparse
 
 import httpx
 from sqlalchemy.orm import Session
@@ -132,17 +133,53 @@ def wordpress_admin_url() -> str:
     return f"{site_url}/wp-admin/" if site_url else ""
 
 
+def _wordpress_site_host() -> str:
+    site_url = _wordpress_site_url()
+
+    if not site_url:
+        return ""
+
+    parsed = urlparse(site_url)
+    return (parsed.netloc or parsed.path).strip("/")
+
+
+def _wordpress_direct_posts_url() -> str:
+    return f"{_wordpress_site_url()}/wp-json/wp/v2/posts"
+
+
+def _wordpress_public_posts_url() -> str:
+    site = quote(_wordpress_site_host(), safe="")
+    return f"https://public-api.wordpress.com/wp/v2/sites/{site}/posts"
+
+
+def _wordpress_posts_urls() -> List[str]:
+    host = _wordpress_site_host()
+
+    if not host:
+        return []
+
+    direct_url = _wordpress_direct_posts_url()
+    public_url = _wordpress_public_posts_url()
+
+    if host.endswith(".wordpress.com"):
+        return [public_url, direct_url]
+
+    return [direct_url, public_url]
+
+
+def wordpress_api_url() -> str:
+    urls = _wordpress_posts_urls()
+    return urls[0] if urls else ""
+
+
 def wordpress_source() -> Dict[str, str]:
     site_url = _wordpress_site_url()
     return {
         "source": "wordpress" if site_url else "local",
         "wordpress_site_url": site_url,
+        "wordpress_api_url": wordpress_api_url(),
         "wordpress_admin_url": wordpress_admin_url(),
     }
-
-
-def _wordpress_posts_url() -> str:
-    return f"{_wordpress_site_url()}/wp-json/wp/v2/posts"
 
 
 def _strip_html(value: str) -> str:
@@ -249,6 +286,30 @@ def _wordpress_post_to_blog(post: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+async def _get_wordpress_posts_response(
+    client: httpx.AsyncClient,
+    params: Dict[str, Any],
+) -> httpx.Response:
+    last_error: Optional[httpx.HTTPStatusError] = None
+
+    for url in _wordpress_posts_urls():
+        response = await client.get(url, params=params)
+
+        try:
+            response.raise_for_status()
+            return response
+        except httpx.HTTPStatusError as exc:
+            last_error = exc
+
+            if exc.response.status_code not in {404, 410}:
+                raise
+
+    if last_error:
+        raise last_error
+
+    raise httpx.HTTPError("WordPress site URL is not configured")
+
+
 async def list_wordpress_blogs(
     page: int = 1,
     page_size: int = 9,
@@ -267,8 +328,7 @@ async def list_wordpress_blogs(
         params["search"] = search.strip()
 
     async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
-        response = await client.get(_wordpress_posts_url(), params=params)
-        response.raise_for_status()
+        response = await _get_wordpress_posts_response(client, params)
 
     total = int(response.headers.get("X-WP-Total") or 0)
     pages = int(response.headers.get("X-WP-TotalPages") or 1)
@@ -283,15 +343,14 @@ async def list_wordpress_blogs(
 
 async def get_wordpress_blog_by_slug(slug: str) -> Optional[Dict[str, Any]]:
     async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
-        response = await client.get(
-            _wordpress_posts_url(),
-            params={
+        response = await _get_wordpress_posts_response(
+            client,
+            {
                 "slug": slug,
                 "status": "publish",
                 "_embed": "1",
             },
         )
-        response.raise_for_status()
 
     posts = response.json()
 
