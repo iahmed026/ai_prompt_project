@@ -1,0 +1,383 @@
+================================================================================
+                    AI PROMPT GENERATOR - PROJECT DESCRIPTION
+================================================================================
+
+PROJECT OVERVIEW
+================================================================================
+The AI Prompt Generator is a full-stack web application that helps users create, 
+optimize, and manage AI prompts. The system combines a FastAPI backend with a 
+static frontend to provide an intuitive interface for generating high-quality 
+prompts tailored to specific niches and use cases.
+
+The application uses OpenRouter API for LLM integration, allowing users to generate 
+optimized prompts with support for mock LLM responses for testing and development.
+
+
+TECHNOLOGY STACK
+================================================================================
+
+BACKEND:
+  - Framework: FastAPI (v0.128.8) - Modern Python web framework with built-in async support
+  - Server: Uvicorn (v0.39.0) - ASGI web server
+  - Database: SQLAlchemy (v2.0.49) - ORM for database operations
+  - Database Driver: SQLite (local development) / PostgreSQL (production)
+  - Database Migrations: Alembic (v1.16.5)
+  - Validation: Pydantic (v2.13.4) - Data validation and serialization
+  - Authentication: Python-jose (v3.5.0) with bcrypt (v5.0.0)
+  - Caching: Cachetools (v6.2.6)
+  - HTTP Client: Httpx (v0.28.1) - For external API calls
+  - Environment: Python-dotenv (v1.2.1) - Environment configuration
+  - Logging: Loguru (v0.7.3)
+
+FRONTEND:
+  - HTML5 with semantic markup
+  - CSS3 with modern styling
+  - Vanilla JavaScript (no framework dependencies for simplicity)
+  - Google Fonts (Inter font family)
+  - Lucide Icons for UI elements
+
+
+PROJECT STRUCTURE
+================================================================================
+
+/ai_prompt_project/
+├── backend/
+│   ├── app/
+│   │   ├── __init__.py
+│   │   ├── main.py                    # FastAPI app initialization and routing
+│   │   ├── api/
+│   │   │   ├── __init__.py
+│   │   │   ├── deps.py                # Dependency injection
+│   │   │   ├── routes/
+│   │   │   │   ├── auth.py            # Authentication endpoints
+│   │   │   │   ├── history.py         # Prompt history endpoints
+│   │   │   │   ├── niches.py          # Niche management endpoints
+│   │   │   │   └── prompts.py         # Prompt generation endpoints
+│   │   │   └── v1/
+│   │   │       ├── __init__.py
+│   │   │       └── router.py          # V1 API router
+│   │   ├── core/
+│   │   │   ├── __init__.py
+│   │   │   ├── cache.py               # Caching utilities
+│   │   │   ├── config.py              # Configuration management
+│   │   │   ├── database.py            # Database connection and init
+│   │   │   ├── logging.py             # Logging configuration
+│   │   │   └── security.py            # Security utilities
+│   │   ├── definitions/
+│   │   │   ├── ui_schema.json         # UI schema definitions
+│   │   │   └── custom/                # Custom schema definitions
+│   │   ├── models/
+│   │   │   ├── __init__.py
+│   │   │   ├── niche.py               # Niche database model
+│   │   │   ├── prompt.py              # Prompt history model
+│   │   │   └── user.py                # User model
+│   │   ├── repositories/
+│   │   │   ├── __init__.py
+│   │   │   ├── prompt_repo.py         # Prompt data access layer
+│   │   │   └── user_repo.py           # User data access layer
+│   │   ├── schemas/
+│   │   │   ├── __init__.py
+│   │   │   ├── auth.py                # Auth request/response schemas
+│   │   │   ├── niche.py               # Niche schemas
+│   │   │   ├── prompt.py              # Prompt schemas
+│   │   │   └── auth.py                # Auth schemas
+│   │   ├── services/
+│   │   │   ├── __init__.py
+│   │   │   ├── ai_service.py          # LLM integration and prompt optimization
+│   │   │   ├── auth_service.py        # Authentication business logic
+│   │   │   ├── niche_service.py       # Niche management logic
+│   │   │   └── prompt_service.py      # Prompt generation logic
+│   │   └── utils/
+│   │       ├── __init__.py
+│   │       ├── schema_loader.py       # UI schema loading utilities
+│   │       └── validators.py          # Custom validators
+│   ├── alembic/                       # Database migration scripts
+│   ├── requirements.txt               # Python dependencies
+│   └── .env                           # Environment variables (not committed)
+├── frontend/
+│   ├── index.html                     # Main HTML entry point
+│   ├── app.js                         # Frontend application logic
+│   └── style.css                      # Styling
+├── docker-compose.yml                 # Docker Compose configuration
+└── README.md                          # Project documentation
+
+
+KEY FEATURES
+================================================================================
+
+1. PROMPT GENERATION
+   - Create prompts based on dynamic UI schemas
+   - Support for multiple niches (categories/domains)
+   - Contextual prompt building with user inputs
+   - Template-based prompt construction
+
+2. PROMPT OPTIMIZATION
+   - Integration with OpenRouter API for LLM services
+   - Automatic prompt optimization and refinement
+   - Mock LLM mode for testing without API calls
+   - Support for different LLM models via configuration
+
+3. PROMPT HISTORY
+   - Store and retrieve generated prompts
+   - Track niche, context, and optimization details
+   - Caching support to reduce redundant API calls
+   - Historical data analysis capabilities
+
+4. NICHE MANAGEMENT
+   - Dynamic niche/category management
+   - Niche-specific UI schemas
+   - Customizable niche options
+   - Niche-based prompt optimization hints
+
+5. AUTHENTICATION
+   - User authentication with JWT tokens
+   - Password hashing with bcrypt
+   - Secure token generation and validation
+   - Protected API endpoints
+
+6. API DOCUMENTATION
+   - Auto-generated Swagger documentation at /docs
+   - RESTful API design with versioning (v1)
+   - CORS enabled for cross-origin requests
+   - Health check endpoint
+
+
+API ENDPOINTS
+================================================================================
+
+VERSION 1 (/api/v1):
+  GET  /ui-schema/                              # Get all UI schemas
+  GET  /ui-schema/niches/{niche_id}             # Get niche-specific schema
+  POST /ui-schema/niches/{niche_id}/add-option  # Add schema option
+  POST /generate                                 # Generate optimized prompt
+  GET  /history/                                 # Get prompt history
+  GET  /health                                   # Health check
+
+AUTHENTICATION (/api/auth):
+  POST /login                                    # User login
+  POST /register                                 # User registration
+  POST /refresh                                  # Refresh token
+
+PROMPTS (/api/prompts):
+  POST /                                         # Create new prompt
+  GET  /{prompt_id}                             # Get prompt details
+  GET  /                                         # List user prompts
+
+HISTORY (/api/history):
+  GET  /                                         # Get generation history
+  GET  /{id}                                    # Get specific history item
+
+NICHES (/api/niches):
+  GET  /                                         # List all niches
+  POST /                                         # Create new niche
+  GET  /{niche_id}                              # Get niche details
+
+
+DATABASE MODELS
+================================================================================
+
+1. PromptHistory
+   - id: Integer (Primary Key)
+   - niche_id: String (Foreign Key)
+   - context: Text
+   - selection_json: Text (JSON)
+   - final_template: Text
+   - optimized_prompt: Text
+   - cached: Boolean (indicates if result was cached)
+   - created_at: DateTime
+
+2. User (inferred from project structure)
+   - id: Integer (Primary Key)
+   - email: String (Unique)
+   - username: String (Unique)
+   - hashed_password: String
+   - created_at: DateTime
+
+3. Niche (inferred from project structure)
+   - id: String (Primary Key)
+   - label: String
+   - description: Text (optional)
+   - schema: JSON
+   - created_at: DateTime
+
+
+CONFIGURATION
+================================================================================
+
+Environment Variables (.env):
+  - DATABASE_URL: SQLite or PostgreSQL connection string
+  - OPENROUTER_API_KEY: API key for OpenRouter service
+  - OPENROUTER_MODEL: LLM model to use (default: gpt-3.5-turbo or similar)
+  - USE_MOCK_LLM: Boolean (true for testing without API calls)
+  - APP_NAME: Application name
+  - ALLOWED_ORIGINS: CORS allowed origins
+  - JWT_SECRET: Secret key for JWT token generation
+  - JWT_ALGORITHM: Algorithm for JWT encoding (default: HS256)
+  - FRONTEND_DIR: Path to frontend files
+
+Default Configuration:
+  - Database: SQLite at backend/prompt_generator.db
+  - Server: http://127.0.0.1:8000
+  - CORS Origins: localhost:5500, localhost:8000, 127.0.0.1:5500, 127.0.0.1:8000
+
+
+FRONTEND FEATURES
+================================================================================
+
+1. RESPONSIVE DESIGN
+   - Mobile-friendly interface
+   - Sidebar navigation
+   - Header with branding and navigation
+
+2. COMPONENTS
+   - Niche selector
+   - Dynamic form based on UI schemas
+   - Prompt preview/editor
+   - History viewer
+   - Settings panel
+
+3. NAVIGATION
+   - Home page (Prompt Generator)
+   - Blogs section
+   - Contact page
+   - API Documentation link
+
+4. INTERACTION
+   - Real-time schema loading
+   - Dynamic form building
+   - Prompt optimization on demand
+   - History management
+
+
+WORKFLOW
+================================================================================
+
+1. USER INITIATES REQUEST
+   ├─ User selects a niche
+   ├─ User fills out dynamic form based on niche schema
+   └─ User submits prompt generation request
+
+2. BACKEND PROCESSES REQUEST
+   ├─ Validate user input
+   ├─ Build prompt template from inputs
+   ├─ Check cache for similar prompts
+   ├─ If not cached, call LLM to optimize
+   └─ Store result in prompt history
+
+3. RESPONSE TO USER
+   ├─ Return optimized prompt
+   ├─ Display in UI
+   └─ Add to history
+
+4. HISTORY MANAGEMENT
+   ├─ User can view all past prompts
+   ├─ User can review optimization details
+   └─ User can reuse or modify prompts
+
+
+RUNNING THE APPLICATION
+================================================================================
+
+LOCAL SETUP:
+  1. Navigate to project directory:
+     cd ~/Desktop/ai_prompt_project
+
+  2. Create virtual environment:
+     /usr/bin/python3 -m venv venv
+
+  3. Activate virtual environment:
+     source venv/bin/activate
+
+  4. Upgrade pip and install dependencies:
+     python -m pip install --upgrade pip setuptools wheel
+     cd backend
+     pip install -r requirements.txt
+
+  5. Run the application:
+     python -m uvicorn app.main:app --reload
+
+  6. Access the application:
+     - Frontend: http://127.0.0.1:8000
+     - Swagger Docs: http://127.0.0.1:8000/docs
+
+DOCKER DEPLOYMENT:
+  - docker-compose.yml available for containerized deployment
+  - Supports full stack deployment with backend and database
+
+
+DEVELOPMENT NOTES
+================================================================================
+
+1. MOCK LLM MODE
+   - Set USE_MOCK_LLM=true in .env to avoid API calls
+   - Useful for development and testing
+   - Generates realistic mock responses
+
+2. CACHING
+   - Reduces redundant API calls
+   - Improves performance
+   - Can be configured via CacheTools
+
+3. DATABASE MIGRATIONS
+   - Alembic used for schema versioning
+   - Automatic initialization on startup
+   - Supports multiple database backends
+
+4. SECURITY CONSIDERATIONS
+   - Do not commit .env file
+   - Do not commit virtual environments
+   - Do not commit SQLite databases
+   - JWT tokens for API authentication
+   - CORS properly configured
+   - Password hashing with bcrypt
+
+5. LOGGING
+   - Loguru integrated for comprehensive logging
+   - Request/response logging
+   - Error tracking and debugging
+
+
+POTENTIAL ENHANCEMENTS
+================================================================================
+
+1. User authentication UI
+2. Advanced prompt analytics
+3. Prompt sharing and collaboration
+4. Template library
+5. Integration with multiple LLM providers
+6. Batch prompt generation
+7. Prompt versioning and rollback
+8. Export to various formats (JSON, CSV, etc.)
+9. Advanced caching strategies
+10. Rate limiting
+
+
+PROJECT STATUS
+================================================================================
+
+Version: 0.1.0
+Status: Active Development
+Last Updated: 2026-05-18
+
+Key Functionalities:
+✓ FastAPI backend with async support
+✓ SQLAlchemy ORM with migration support
+✓ Authentication system
+✓ Niche-based prompt generation
+✓ LLM integration via OpenRouter
+✓ Caching layer
+✓ Static frontend serving
+✓ API documentation (Swagger)
+
+
+DEPENDENCIES & LICENSES
+================================================================================
+
+All dependencies are listed in requirements.txt
+Main licenses are typically MIT, BSD, or Apache 2.0
+See individual package repositories for detailed license information
+
+
+================================================================================
+                            END OF DESCRIPTION
+================================================================================

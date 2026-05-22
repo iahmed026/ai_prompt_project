@@ -1,0 +1,526 @@
+{
+  "version": "2.0",
+  "global": {
+    "tones": [
+      {
+        "id": "professional",
+        "label": "Professional"
+      },
+      {
+        "id": "friendly",
+        "label": "Friendly"
+      },
+      {
+        "id": "direct",
+        "label": "Direct"
+      },
+      {
+        "id": "creative",
+        "label": "Creative"
+      },
+      {
+        "id": "persuasive",
+        "label": "Persuasive"
+      },
+      {
+        "id": "technical",
+        "label": "Technical"
+      },
+      {
+        "id": "encouraging",
+        "label": "Encouraging"
+      },
+      {
+        "id": "minimal",
+        "label": "Minimal"
+      }
+    ],
+    "lengths": [
+      {
+        "id": "short",
+        "label": "Short"
+      },
+      {
+        "id": "medium",
+        "label": "Medium"
+      },
+      {
+        "id": "detailed",
+        "label": "Detailed"
+      },
+      {
+        "id": "comprehensive",
+        "label": "Comprehensive"
+      }
+    ],
+    "prompt_templates": [
+      "Act as an expert in the field",
+      "Generate step-by-step output",
+      "Ask clarifying questions first",
+      "Provide beginner and advanced versions",
+      "Use markdown formatting",
+      "Include actionable recommendations",
+      "Explain with examples",
+      "Summarize key takeaways"
+    ]
+  },
+  "niches": [
+    {
+      "id": "marketing",
+      "label": "Marketing",
+      "description": "Marketing, branding, campaigns, social media, and conversion-focused content.",
+      "tasks": [
+        "Write ad copy",
+        "Create landing page",
+        "Generate email campaign",
+        "Write product description",
+        "Generate social media captions",
+        "Create campaign strategy",
+        "Write video script",
+        "Generate marketing hooks",
+        "Create lead magnet",
+        "Write SEO blog outline",
+        "Generate CTA variations",
+        "Write brand messaging",
+        "Digital marketing",
+        "Make an Email maketing add"
+      ],
+      "constraints": [
+        "Avoid hype language",
+        "Use simple wording",
+        "Keep sentences concise",
+        "Include social proof",
+        "Focus on customer pain points",
+        "Avoid jargon",
+        "Use emotional triggers carefully",
+        "Mention clear benefits",
+        "Keep claims realistic",
+        "Include call to action",
+        "Optimize for conversions",
+        "Write for mobile readers"
+      ],
+      "output_formats": [
+        "Bullet list",
+        "Email draft",
+        "Carousel content",
+        "Landing page sections",
+        "Campaign brief",
+        "A/B test variations",
+        "Table",
+        "Script",
+        "LinkedIn post",
+        "Twitter/X thread",
+        "Short-form captions"
+      ],
+      "tones": [
+        "Persuasive",
+        "Confident",
+        "Friendly",
+        "Luxury",
+        "Playful",
+        "Bold",
+        "Professional",
+        "Minimal"
+      ],
+      "best_practices": [
+        "Lead with the customer outcome",
+        "Highlight transformation",
+        "Focus on one core message",
+        "Keep the CTA clear",
+        "Use audience-specific language",
+        "Include urgency naturally",
+        "Write skimmable content",
+        "Address objections early"
+      ],
+      "target_audience": [
+        "Startup founders",
+        "Small business owners",
+        "Creators",
+        "Agencies",
+        "Enterprise buyers",
+        "Students",
+        "Freelancers"
+      ],
+      "platforms": [
+        "Instagram",
+        "LinkedIn",
+        "Twitter/X",
+        "Facebook",
+        "TikTok",
+        "YouTube",
+        "Email",
+        "Google Ads"
+      ],
+      "goal_types": [
+        "Increase conversions",
+        "Generate leads",
+        "Improve engagement",
+        "Boost awareness",
+        "Drive signups",
+        "Increase retention"
+      ]
+    },
+    {
+      "id": "saas",
+      "label": "SaaS",
+      "description": "Product communication, onboarding, documentation, and SaaS workflows.",
+      "tasks": [
+        "Write onboarding flow",
+        "Generate release notes",
+        "Create help center article",
+        "Write feature announcement",
+        "Generate UI microcopy",
+        "Create product documentation",
+        "Draft customer support response",
+        "Write churn reduction email",
+        "Generate sales enablement copy",
+        "Write API documentation",
+        "Create onboarding checklist",
+        "Generate feature comparison"
+      ],
+      "constraints": [
+        "Use practical language",
+        "Avoid technical overload",
+        "Keep steps actionable",
+        "Explain edge cases",
+        "Focus on user workflow",
+        "Avoid vague productivity claims",
+        "Use consistent terminology",
+        "Reduce cognitive load",
+        "Write for non-technical users",
+        "Prioritize clarity"
+      ],
+      "output_formats": [
+        "Checklist",
+        "FAQ",
+        "Release note",
+        "Step-by-step guide",
+        "Table",
+        "Markdown document",
+        "Knowledge base article",
+        "Support response",
+        "Product spec",
+        "JSON structure"
+      ],
+      "tones": [
+        "Helpful",
+        "Technical",
+        "Clear",
+        "Professional",
+        "Minimal",
+        "Supportive"
+      ],
+      "best_practices": [
+        "Describe before and after states",
+        "Clarify user roles",
+        "Explain expected outcomes",
+        "Use real examples",
+        "Reduce ambiguity",
+        "Keep implementation accurate",
+        "Prioritize usability",
+        "Anticipate user confusion"
+      ],
+      "target_audience": [
+        "Developers",
+        "Product managers",
+        "Customer support teams",
+        "Enterprise users",
+        "Non-technical users",
+        "Startup teams"
+      ],
+      "platforms": [
+        "Web app",
+        "Mobile app",
+        "Dashboard",
+        "API",
+        "Admin panel",
+        "Chrome extension"
+      ],
+      "goal_types": [
+        "Improve onboarding",
+        "Reduce churn",
+        "Increase activation",
+        "Improve retention",
+        "Reduce support tickets",
+        "Improve usability"
+      ]
+    },
+    {
+      "id": "education",
+      "label": "Education",
+      "description": "Learning resources, teaching assistance, and educational content generation.",
+      "tasks": [
+        "Create lesson plan",
+        "Generate quiz questions",
+        "Explain a concept",
+        "Create flashcards",
+        "Generate assignments",
+        "Design study guide",
+        "Create classroom activity",
+        "Write learning objectives",
+        "Generate discussion questions",
+        "Simplify difficult topic",
+        "Create exam preparation notes",
+        "Generate practice exercises"
+      ],
+      "constraints": [
+        "Use age-appropriate language",
+        "Include examples",
+        "Keep explanations simple",
+        "Encourage critical thinking",
+        "Avoid unnecessary jargon",
+        "Include practice questions",
+        "Support different learning styles",
+        "Check for misconceptions",
+        "Use step-by-step explanations",
+        "Keep content engaging"
+      ],
+      "output_formats": [
+        "Lesson outline",
+        "Quiz",
+        "Worksheet",
+        "Flashcards",
+        "Rubric",
+        "Study guide",
+        "Presentation outline",
+        "Mind map",
+        "Summary notes",
+        "Interactive activity"
+      ],
+      "tones": [
+        "Encouraging",
+        "Friendly",
+        "Academic",
+        "Interactive",
+        "Simple",
+        "Motivational"
+      ],
+      "best_practices": [
+        "State learning objectives clearly",
+        "Build from simple to advanced",
+        "Use active learning techniques",
+        "Include self-assessment",
+        "Encourage curiosity",
+        "Reinforce key concepts",
+        "Use real-world examples",
+        "Adapt for learner level"
+      ],
+      "target_audience": [
+        "Elementary students",
+        "High school students",
+        "College students",
+        "Teachers",
+        "Parents",
+        "Self-learners"
+      ],
+      "platforms": [
+        "Classroom",
+        "Online course",
+        "Workshop",
+        "YouTube lesson",
+        "Learning management system"
+      ],
+      "goal_types": [
+        "Improve understanding",
+        "Increase engagement",
+        "Prepare for exams",
+        "Develop critical thinking",
+        "Support self-learning"
+      ]
+    },
+    {
+      "id": "real-estate",
+      "label": "Real estate",
+      "description": "Property listings, buyer and seller outreach, market updates, real estate ads, and client communication.",
+      "tasks": [
+        "Write property listing description",
+        "Create open house announcement",
+        "Generate buyer consultation questions",
+        "Write seller lead follow-up",
+        "Create neighborhood guide",
+        "Generate real estate ad copy",
+        "Write email drip campaign",
+        "Create market update summary",
+        "Generate social media captions",
+        "Write agent bio",
+        "Create home staging checklist",
+        "Draft client response"
+      ],
+      "constraints": [
+        "Keep claims accurate",
+        "Avoid fair housing violations",
+        "Use clear property details",
+        "Avoid exaggerated promises",
+        "Keep tone professional",
+        "Mention location benefits carefully",
+        "Use buyer-focused language",
+        "Keep copy skimmable",
+        "Include clear next step",
+        "Avoid misleading urgency",
+        "Respect client privacy",
+        "Use compliant language"
+      ],
+      "output_formats": [
+        "Listing description",
+        "Email draft",
+        "Social media post",
+        "Ad copy variations",
+        "Open house flyer copy",
+        "Neighborhood guide",
+        "Market report summary",
+        "Client message",
+        "Checklist",
+        "FAQ",
+        "Call script",
+        "Landing page sections"
+      ],
+      "tones": [
+        "Professional",
+        "Trustworthy",
+        "Friendly",
+        "Luxury",
+        "Direct",
+        "Helpful",
+        "Confident"
+      ],
+      "best_practices": [
+        "Lead with the strongest property or client benefit",
+        "Use specific details instead of vague adjectives",
+        "Make the next action obvious",
+        "Write for the target buyer or seller",
+        "Keep compliance and accuracy in mind",
+        "Highlight lifestyle benefits without overpromising",
+        "Use scannable sections for long copy",
+        "Support market claims with context"
+      ],
+      "target_audience": [
+        "Home buyers",
+        "Home sellers",
+        "Real estate investors",
+        "Luxury property buyers",
+        "First-time buyers",
+        "Renters",
+        "Landlords",
+        "Real estate agents"
+      ],
+      "platforms": [
+        "Zillow",
+        "Realtor.com",
+        "MLS",
+        "Facebook",
+        "Instagram",
+        "LinkedIn",
+        "Email",
+        "Agent website"
+      ],
+      "goal_types": [
+        "Generate seller leads",
+        "Attract buyer inquiries",
+        "Promote a listing",
+        "Increase open house attendance",
+        "Improve client follow-up",
+        "Build agent credibility",
+        "Educate clients",
+        "Increase listing visibility"
+      ]
+    },
+    {
+      "id": "e-commerce",
+      "label": "E-commerce",
+      "description": "Online stores, product pages, marketplaces, customer retention, offers, and conversion-focused shopping experiences.",
+      "tasks": [
+        "Write product description",
+        "Create product title variations",
+        "Generate category page copy",
+        "Write abandoned cart email",
+        "Create upsell offer",
+        "Generate product launch campaign",
+        "Write marketplace listing",
+        "Create customer review request",
+        "Generate FAQ for product page",
+        "Write promotional email",
+        "Create checkout microcopy",
+        "Generate SEO product copy",
+        "Generate real estate add copy"
+      ],
+      "constraints": [
+        "Keep claims accurate",
+        "Avoid exaggerated guarantees",
+        "Mention product benefits clearly",
+        "Use buyer-focused language",
+        "Keep copy skimmable",
+        "Include trust signals",
+        "Avoid confusing jargon",
+        "Highlight shipping or return details when relevant",
+        "Focus on one primary offer",
+        "Use clear calls to action",
+        "Write for mobile shoppers",
+        "Match the brand voice"
+      ],
+      "output_formats": [
+        "Product page copy",
+        "Email draft",
+        "Bullet list",
+        "Marketplace listing",
+        "FAQ",
+        "Comparison table",
+        "Landing page sections",
+        "Ad copy variations",
+        "SEO meta title and description",
+        "Checkout microcopy",
+        "Promotion brief",
+        "Customer support response"
+      ],
+      "tones": [
+        "Persuasive",
+        "Friendly",
+        "Premium",
+        "Direct",
+        "Trustworthy",
+        "Playful",
+        "Professional",
+        "Minimal"
+      ],
+      "best_practices": [
+        "Lead with the customer problem or desire",
+        "Translate features into benefits",
+        "Make the offer easy to understand",
+        "Use specific product details",
+        "Reduce purchase hesitation",
+        "Keep calls to action clear",
+        "Support claims with proof when available",
+        "Optimize for quick scanning"
+      ],
+      "target_audience": [
+        "Online shoppers",
+        "First-time buyers",
+        "Returning customers",
+        "Gift buyers",
+        "Price-sensitive customers",
+        "Premium buyers",
+        "Marketplace visitors",
+        "Email subscribers"
+      ],
+      "platforms": [
+        "Shopify",
+        "WooCommerce",
+        "Amazon",
+        "Etsy",
+        "eBay",
+        "Instagram Shop",
+        "TikTok Shop",
+        "Email"
+      ],
+      "goal_types": [
+        "Increase conversions",
+        "Improve average order value",
+        "Reduce cart abandonment",
+        "Boost repeat purchases",
+        "Improve product discovery",
+        "Increase customer trust",
+        "Improve SEO traffic",
+        "Launch a new product"
+      ]
+    }
+  ]
+}

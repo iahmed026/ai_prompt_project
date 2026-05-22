@@ -1,0 +1,21 @@
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Virtual environments
+venv/
+.venv/
+
+# Local environment and databases
+.env
+backend/.env
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log

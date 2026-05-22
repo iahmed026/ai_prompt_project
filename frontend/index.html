@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>AI Prompt Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header-inner">
+      <a class="site-brand" href="/" aria-label="AI Prompt Generator home">
+        <span class="brand-mark small">AI</span>
+        <span class="site-brand-text">
+          <strong>Prompt Studio</strong>
+          <small>Generator</small>
+        </span>
+      </a>
+
+      <nav class="site-nav" aria-label="Primary navigation">
+        <button class="nav-button active" type="button" data-nav-action="home">
+          <i data-lucide="home"></i>
+          Home
+        </button>
+        <button class="nav-button" type="button" data-nav-action="blogs">
+          <i data-lucide="newspaper"></i>
+          Blogs
+        </button>
+        <button class="nav-button" type="button" data-nav-action="contact">
+          <i data-lucide="mail"></i>
+          Contact
+        </button>
+        <a class="nav-button nav-link" href="/docs" target="_blank" rel="noreferrer">
+          <i data-lucide="file-text"></i>
+          API Docs
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-tools">
+        <div class="sidebar-actions">
+          <button id="refresh" class="icon-button" type="button" title="Refresh schemas" aria-label="Refresh schemas">
+            <i data-lucide="refresh-cw"></i>
+          </button>
+          <button id="add-niche" class="icon-button" type="button" title="Add niche" aria-label="Add niche">
+            <i data-lucide="folder-plus"></i>
+          </button>
+        </div>
+        <span id="schema-status" class="status-pill">Loading</span>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="section-kicker">Niches</div>
+        <div id="niche-list" class="niche-list"></div>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <div>
+          <div class="section-kicker">Workspace</div>
+          <h1 id="niche-title">Prompt Builder</h1>
+        </div>
+        <div class="topbar-actions">
+          <button id="clear" class="ghost-button" type="button">
+            <i data-lucide="eraser"></i>
+            Clear
+          </button>
+          <button id="add-option" class="ghost-button" type="button">
+            <i data-lucide="plus"></i>
+            Add Option
+          </button>
+        </div>
+      </header>
+
+      <div class="content-grid">
+        <section class="panel builder-panel" aria-label="Prompt builder">
+          <div class="panel-head">
+            <div>
+              <div class="section-kicker">Inputs</div>
+              <h2>Prompt Brief</h2>
+            </div>
+            <span id="selection-count" class="soft-pill">0 selected</span>
+          </div>
+
+          <div id="schema-area" class="schema-area"></div>
+
+          <label class="field-block" for="context">
+            <span>Context</span>
+            <textarea id="context" rows="7" placeholder="Launch a new AI writing tool for small SaaS teams"></textarea>
+          </label>
+          <div class="context-actions">
+            <button id="generate" class="primary-button" type="button">
+              <i data-lucide="sparkles"></i>
+              Generate
+            </button>
+          </div>
+        </section>
+
+        <section class="panel output-panel" aria-label="Generated prompt">
+          <div class="panel-head">
+            <div>
+              <div class="section-kicker">Output</div>
+              <h2>Optimized Prompt</h2>
+            </div>
+            <div class="output-actions">
+              <span id="result-meta" class="soft-pill">Ready</span>
+              <button id="copy" class="icon-button" type="button" title="Copy prompt" aria-label="Copy prompt">
+                <i data-lucide="copy"></i>
+              </button>
+            </div>
+          </div>
+
+          <pre id="output" class="prompt-output"></pre>
+        </section>
+      </div>
+
+      <section class="panel history-panel" aria-label="Generation history">
+        <div class="panel-head">
+          <div>
+            <div class="section-kicker">Recent</div>
+            <h2>History</h2>
+          </div>
+          <button id="refresh-history" class="icon-button" type="button" title="Refresh history" aria-label="Refresh history">
+            <i data-lucide="rotate-cw"></i>
+          </button>
+        </div>
+        <div id="history-list" class="history-list"></div>
+      </section>
+    </main>
+  </div>
+
+  <main id="blog-view" class="blog-workspace" hidden>
+    <header class="blog-topbar">
+      <div>
+        <div class="section-kicker">Blog</div>
+        <h1 id="blog-page-title">Insights</h1>
+      </div>
+      <div class="blog-toolbar">
+        <label class="search-field" for="blog-search">
+          <i data-lucide="search"></i>
+          <input id="blog-search" type="search" autocomplete="off" placeholder="Search titles">
+        </label>
+        <button id="blog-admin-open" class="ghost-button" type="button">
+          <i data-lucide="shield"></i>
+          Admin
+        </button>
+      </div>
+    </header>
+
+    <section id="blog-list-view" class="blog-section" aria-label="Blog listing">
+      <div id="blog-list" class="blog-grid"></div>
+      <div class="blog-pagination">
+        <button id="blog-prev" class="ghost-button" type="button">
+          <i data-lucide="chevron-left"></i>
+          Previous
+        </button>
+        <span id="blog-page-meta" class="soft-pill">Page 1</span>
+        <button id="blog-next" class="ghost-button" type="button">
+          Next
+          <i data-lucide="chevron-right"></i>
+        </button>
+      </div>
+    </section>
+
+    <section id="blog-detail-view" class="blog-detail-section" aria-label="Blog detail" hidden>
+      <div class="blog-detail-actions">
+        <button id="blog-back" class="ghost-button" type="button">
+          <i data-lucide="arrow-left"></i>
+          Back
+        </button>
+        <button id="blog-detail-edit" class="ghost-button admin-only" type="button" hidden>
+          <i data-lucide="pencil"></i>
+          Edit
+        </button>
+      </div>
+      <article id="blog-detail" class="blog-detail"></article>
+    </section>
+
+    <section id="blog-admin-view" class="blog-admin-section" aria-label="Blog admin" hidden>
+      <div class="panel blog-admin-panel">
+        <div class="panel-head">
+          <div>
+            <div class="section-kicker">Admin</div>
+            <h2 id="blog-form-title">Create Blog</h2>
+          </div>
+          <div class="blog-admin-actions">
+            <button id="blog-new" class="ghost-button" type="button">
+              <i data-lucide="plus"></i>
+              New
+            </button>
+            <button id="blog-admin-logout" class="ghost-button" type="button" hidden>
+              <i data-lucide="log-out"></i>
+              Logout
+            </button>
+          </div>
+        </div>
+
+        <form id="blog-login-form" class="blog-login-form">
+          <label class="field-block" for="blog-admin-username">
+            <span>Username</span>
+            <input id="blog-admin-username" type="text" autocomplete="username">
+          </label>
+          <label class="field-block" for="blog-admin-password">
+            <span>Password</span>
+            <input id="blog-admin-password" type="password" autocomplete="current-password">
+          </label>
+          <button class="primary-button" type="submit">
+            <i data-lucide="log-in"></i>
+            Login
+          </button>
+        </form>
+
+        <form id="blog-form" class="blog-form" hidden>
+          <div class="form-grid">
+            <label class="field-block" for="blog-title">
+              <span>Title</span>
+              <input id="blog-title" type="text" autocomplete="off" required>
+            </label>
+            <label class="field-block" for="blog-author">
+              <span>Author</span>
+              <input id="blog-author" type="text" autocomplete="off" required>
+            </label>
+          </div>
+
+          <label class="field-block" for="blog-summary">
+            <span>Summary</span>
+            <textarea id="blog-summary" rows="3" required></textarea>
+          </label>
+
+          <label class="field-block" for="blog-image-url">
+            <span>Image URL</span>
+            <input id="blog-image-url" type="url" autocomplete="off">
+          </label>
+
+          <label class="field-block" for="blog-content">
+            <span>Content</span>
+            <textarea id="blog-content" rows="14" required></textarea>
+          </label>
+
+          <label class="toggle-row" for="blog-published">
+            <input id="blog-published" type="checkbox" checked>
+            <span>Published</span>
+          </label>
+
+          <div class="dialog-actions">
+            <button id="blog-delete" class="ghost-button danger-button" type="button" hidden>
+              <i data-lucide="trash-2"></i>
+              Delete
+            </button>
+            <button id="blog-cancel-edit" class="ghost-button" type="button">
+              Cancel
+            </button>
+            <button class="primary-button" type="submit">
+              <i data-lucide="save"></i>
+              Save
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <main id="contact-view" class="contact-workspace" hidden>
+    <section class="contact-hero">
+      <div>
+        <div class="section-kicker">Contact</div>
+        <h1>Dagenticx</h1>
+        <p>
+          Dagenticx builds practical AI workflows, prompt systems, and automation tools
+          for teams that want clearer output and faster execution.
+        </p>
+      </div>
+      <div class="contact-hero-panel" aria-label="Dagenticx contact summary">
+        <span class="brand-mark">DX</span>
+        <strong>AI Prompt Generator</strong>
+        <p>Product support, custom prompt systems, blog inquiries, and collaboration.</p>
+      </div>
+    </section>
+
+    <section class="contact-grid" aria-label="Contact options">
+      <article class="contact-card">
+        <i data-lucide="mail"></i>
+        <div>
+          <h2>Email</h2>
+          <a href="mailto:muhammadahmed520026@gmail.com">muhammadahmed520026@gmail.com</a>
+        </div>
+      </article>
+      <article class="contact-card">
+        <i data-lucide="sparkles"></i>
+        <div>
+          <h2>Services</h2>
+          <p>Prompt engineering, AI content workflows, automation strategy, and custom tools.</p>
+        </div>
+      </article>
+      <article class="contact-card">
+        <i data-lucide="clock-3"></i>
+        <div>
+          <h2>Response</h2>
+          <p>Send a clear brief and the Dagenticx team will review it as soon as possible.</p>
+        </div>
+      </article>
+    </section>
+
+    <section class="panel contact-panel" aria-label="Contact form">
+      <div class="panel-head">
+        <div>
+          <div class="section-kicker">Message</div>
+          <h2>Contact Dagenticx</h2>
+        </div>
+      </div>
+      <form id="contact-form" class="contact-form">
+        <div class="form-grid">
+          <label class="field-block" for="contact-name">
+            <span>Name</span>
+            <input id="contact-name" type="text" autocomplete="name" required>
+          </label>
+          <label class="field-block" for="contact-email">
+            <span>Email</span>
+            <input id="contact-email" type="email" autocomplete="email" required>
+          </label>
+        </div>
+        <label class="field-block" for="contact-subject">
+          <span>Subject</span>
+          <input id="contact-subject" type="text" autocomplete="off" placeholder="Custom AI prompt workflow" required>
+        </label>
+        <label class="field-block" for="contact-message">
+          <span>Message</span>
+          <textarea id="contact-message" rows="7" placeholder="Tell Dagenticx what you want to build or improve" required></textarea>
+        </label>
+        <div class="dialog-actions">
+          <button id="contact-clear" class="ghost-button" type="button">
+            <i data-lucide="eraser"></i>
+            Clear
+          </button>
+          <button class="primary-button" type="submit">
+            <i data-lucide="send"></i>
+            Send Email
+          </button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <dialog id="option-dialog" class="option-dialog">
+    <form id="option-form" method="dialog">
+      <div class="dialog-head">
+        <div>
+          <div class="section-kicker">Custom</div>
+          <h2>Add Option</h2>
+        </div>
+        <button id="close-dialog" class="icon-button" type="button" title="Close" aria-label="Close">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <label class="field-block" for="option-field">
+        <span>Field</span>
+        <select id="option-field">
+          <option value="tasks">Tasks</option>
+          <option value="constraints">Constraints</option>
+          <option value="output_formats">Output formats</option>
+        </select>
+      </label>
+
+      <label class="field-block" for="option-value">
+        <span>Option</span>
+        <input id="option-value" type="text" autocomplete="off" placeholder="Write a launch email sequence">
+      </label>
+
+      <div class="dialog-actions">
+        <button id="cancel-option" class="ghost-button" type="button">Cancel</button>
+        <button class="primary-button" type="submit">
+          <i data-lucide="check"></i>
+          Save
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="niche-dialog" class="option-dialog">
+    <form id="niche-form" method="dialog">
+      <div class="dialog-head">
+        <div>
+          <div class="section-kicker">Custom</div>
+          <h2>Add Niche</h2>
+        </div>
+        <button id="close-niche-dialog" class="icon-button" type="button" title="Close" aria-label="Close">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <label class="field-block" for="niche-label">
+        <span>Name</span>
+        <input id="niche-label" type="text" autocomplete="off" placeholder="Podcast Production">
+      </label>
+
+      <label class="field-block" for="niche-description">
+        <span>Description</span>
+        <textarea id="niche-description" rows="3" placeholder="Prompts for planning, scripts, editing notes, and show growth"></textarea>
+      </label>
+
+      <div class="dialog-actions">
+        <button id="cancel-niche" class="ghost-button" type="button">Cancel</button>
+        <button class="primary-button" type="submit">
+          <i data-lucide="check"></i>
+          Save
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
