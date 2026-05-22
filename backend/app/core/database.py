@@ -1,5 +1,6 @@
 from typing import Generator
 
+from sqlalchemy import inspect, text
 from sqlalchemy import create_engine
 from sqlalchemy.orm import (
     declarative_base,
@@ -89,6 +90,7 @@ def init_db() -> None:
     from app.models import blog, prompt, user  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
+    ensure_prompt_history_schema()
 
     # Demo articles make the blog module usable immediately in local/dev setups.
     from app.services.blog_service import seed_demo_blogs
@@ -99,6 +101,40 @@ def init_db() -> None:
         seed_demo_blogs(db)
     finally:
         db.close()
+
+
+def ensure_prompt_history_schema() -> None:
+    """
+    Add lightweight compatibility columns when an existing deployed database
+    was created before the current model shape.
+    """
+
+    inspector = inspect(engine)
+
+    if not inspector.has_table("prompt_history"):
+        return
+
+    columns = {
+        column["name"]
+        for column in inspector.get_columns("prompt_history")
+    }
+
+    if "client_id" in columns:
+        return
+
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "ALTER TABLE prompt_history "
+                "ADD COLUMN client_id VARCHAR(120) NOT NULL DEFAULT 'legacy'"
+            )
+        )
+        connection.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_prompt_history_client_id "
+                "ON prompt_history (client_id)"
+            )
+        )
 
 
 # ==========================================

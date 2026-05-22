@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from typing import Optional
+
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from httpx import HTTPError
 from sqlalchemy.orm import Session
 
@@ -15,6 +17,15 @@ from app.services import niche_service, prompt_service
 
 router = APIRouter()
 router.include_router(blogs_router, tags=["Blogs"])
+
+
+def get_history_client_id(
+    x_client_id: Optional[str] = Header(default=None, alias="X-Client-Id"),
+) -> str:
+    try:
+        return prompt_service.normalize_client_id(x_client_id or "")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.get("/health")
@@ -63,10 +74,11 @@ def add_niche_option(niche_id: str, payload: OptionCreate):
 @router.post("/generate", response_model=PromptGenerateResponse)
 async def generate_prompt(
     payload: PromptGenerateRequest,
+    client_id: str = Depends(get_history_client_id),
     db: Session = Depends(get_db),
 ):
     try:
-        return await prompt_service.generate_prompt(db, payload)
+        return await prompt_service.generate_prompt(db, payload, client_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except HTTPError as exc:
@@ -79,6 +91,9 @@ async def generate_prompt(
 @router.get("/history/", response_model=PromptHistoryResponse)
 def read_history(
     limit: int = Query(default=20, ge=1, le=50),
+    client_id: str = Depends(get_history_client_id),
     db: Session = Depends(get_db),
 ):
-    return PromptHistoryResponse(history=prompt_service.list_history(db, limit=limit))
+    return PromptHistoryResponse(
+        history=prompt_service.list_history(db, client_id=client_id, limit=limit)
+    )

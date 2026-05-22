@@ -1,5 +1,6 @@
 import hashlib
 import json
+import re
 from typing import Any, Dict, Iterable, List
 
 from sqlalchemy.orm import Session
@@ -38,6 +39,16 @@ STRUCTURED_SELECTION_FIELDS = {
 }
 
 PROMPT_ENGINE_VERSION = "playbook-v3"
+CLIENT_ID_PATTERN = re.compile(r"^[a-zA-Z0-9._:-]{8,120}$")
+
+
+def normalize_client_id(client_id: str) -> str:
+    value = clean_text(client_id, max_length=120)
+
+    if not value or not CLIENT_ID_PATTERN.match(value):
+        raise ValueError("A valid client history ID is required")
+
+    return value
 
 
 def _selection_values(value: Any) -> List[str]:
@@ -265,8 +276,10 @@ def save_history(
     final_template: str,
     optimized_prompt: str,
     cached: bool,
+    client_id: str,
 ) -> PromptHistory:
     record = PromptHistory(
+        client_id=client_id,
         niche_id=payload.niche_id,
         context=clean_text(payload.context),
         selection_json=json.dumps(payload.selection, sort_keys=True, default=str),
@@ -283,7 +296,9 @@ def save_history(
 async def generate_prompt(
     db: Session,
     payload: PromptGenerateRequest,
+    client_id: str,
 ) -> PromptGenerateResponse:
+    client_id = normalize_client_id(client_id)
     niche = get_niche_by_id(payload.niche_id)
     final_template = build_final_template(payload, niche)
     cache_key = _cache_key(payload, final_template)
@@ -296,7 +311,7 @@ async def generate_prompt(
         optimized_prompt = await optimize_prompt(final_template, niche_label)
         set_cache(cache_key, optimized_prompt)
 
-    save_history(db, payload, final_template, optimized_prompt, cached)
+    save_history(db, payload, final_template, optimized_prompt, cached, client_id)
     return PromptGenerateResponse(
         optimized_prompt=optimized_prompt,
         final_template=final_template,
@@ -304,10 +319,16 @@ async def generate_prompt(
     )
 
 
-def list_history(db: Session, limit: int = 20) -> List[PromptHistoryItem]:
+def list_history(
+    db: Session,
+    client_id: str,
+    limit: int = 20,
+) -> List[PromptHistoryItem]:
+    client_id = normalize_client_id(client_id)
     safe_limit = min(max(limit, 1), 50)
     records = (
         db.query(PromptHistory)
+        .filter(PromptHistory.client_id == client_id)
         .order_by(PromptHistory.created_at.desc(), PromptHistory.id.desc())
         .limit(safe_limit)
         .all()

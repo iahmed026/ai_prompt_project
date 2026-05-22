@@ -6,6 +6,8 @@ const AUTH_PREFIX = window.location.protocol === 'file:'
   ? 'http://localhost:8000/api/auth'
   : '/api/auth';
 
+const CLIENT_ID_KEY = 'promptClientId';
+
 const state = {
   masterSchema: null,
   currentNiche: null,
@@ -77,6 +79,32 @@ const el = {
   contactMessage: document.getElementById('contact-message'),
 };
 
+function createClientId() {
+  if (window.crypto?.randomUUID) {
+    return window.crypto.randomUUID();
+  }
+
+  if (window.crypto?.getRandomValues) {
+    const bytes = new Uint8Array(16);
+    window.crypto.getRandomValues(bytes);
+    return [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+  }
+
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
+function getClientId() {
+  const existing = window.localStorage.getItem(CLIENT_ID_KEY);
+
+  if (/^[a-zA-Z0-9._:-]{8,120}$/.test(existing || '')) {
+    return existing;
+  }
+
+  const clientId = createClientId();
+  window.localStorage.setItem(CLIENT_ID_KEY, clientId);
+  return clientId;
+}
+
 function refreshIcons() {
   if (window.lucide) {
     window.lucide.createIcons();
@@ -93,7 +121,18 @@ function showToast(message) {
 }
 
 async function apiJson(path, options = {}) {
-  const response = await fetch(path, options);
+  const headers = {
+    ...(options.headers || {}),
+  };
+
+  if (String(path).startsWith(API_PREFIX)) {
+    headers['X-Client-Id'] = getClientId();
+  }
+
+  const response = await fetch(path, {
+    ...options,
+    headers,
+  });
   const text = await response.text();
   const data = text ? JSON.parse(text) : {};
 

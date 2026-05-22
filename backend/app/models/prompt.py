@@ -7,6 +7,7 @@ class PromptHistory(Base):
     __tablename__ = "prompt_history"
 
     id = Column(Integer, primary_key=True, index=True)
+    client_id = Column(String(120), default="legacy", index=True, nullable=False)
     niche_id = Column(String(80), index=True, nullable=False)
     context = Column(Text, default="", nullable=False)
     selection_json = Column(Text, default="{}", nullable=False)
