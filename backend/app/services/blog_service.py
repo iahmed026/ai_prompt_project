@@ -10,6 +10,7 @@ from urllib.parse import quote, urlparse
 import httpx
 from sqlalchemy.orm import Session
 
+from app.core.cache import get_cache, set_cache
 from app.core.config import settings
 from app.models.blog import Blog
 from app.schemas.blog import BlogCreate, BlogUpdate
@@ -182,6 +183,14 @@ def wordpress_source() -> Dict[str, str]:
     }
 
 
+def _wordpress_cache_key(*parts: Any) -> str:
+    normalized = [
+        str(part or "").strip().lower()
+        for part in parts
+    ]
+    return "wordpress:blogs:" + ":".join(normalized)
+
+
 def _strip_html(value: str) -> str:
     parser = _HTMLTextExtractor()
     parser.feed(value or "")
@@ -317,6 +326,19 @@ async def list_wordpress_blogs(
 ) -> Tuple[List[Dict[str, Any]], int, int]:
     safe_page = max(page, 1)
     safe_page_size = min(max(page_size, 1), 50)
+    safe_search = (search or "").strip()
+    cache_key = _wordpress_cache_key(
+        _wordpress_site_host(),
+        "list",
+        safe_page,
+        safe_page_size,
+        safe_search,
+    )
+    cached = get_cache(cache_key)
+
+    if cached:
+        return cached
+
     params = {
         "page": safe_page,
         "per_page": safe_page_size,
@@ -324,8 +346,8 @@ async def list_wordpress_blogs(
         "_embed": "1",
     }
 
-    if search:
-        params["search"] = search.strip()
+    if safe_search:
+        params["search"] = safe_search
 
     async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
         response = await _get_wordpress_posts_response(client, params)
@@ -338,15 +360,28 @@ async def list_wordpress_blogs(
         posts = []
 
     items = [_wordpress_post_to_blog(post) for post in posts]
-    return items, total or len(items), max(pages, 1)
+    result = (items, total or len(items), max(pages, 1))
+    set_cache(cache_key, result)
+    return result
 
 
 async def get_wordpress_blog_by_slug(slug: str) -> Optional[Dict[str, Any]]:
+    safe_slug = slug.strip()
+    cache_key = _wordpress_cache_key(
+        _wordpress_site_host(),
+        "detail",
+        safe_slug,
+    )
+    cached = get_cache(cache_key)
+
+    if cached:
+        return cached
+
     async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
         response = await _get_wordpress_posts_response(
             client,
             {
-                "slug": slug,
+                "slug": safe_slug,
                 "status": "publish",
                 "_embed": "1",
             },
@@ -357,7 +392,9 @@ async def get_wordpress_blog_by_slug(slug: str) -> Optional[Dict[str, Any]]:
     if not isinstance(posts, list) or not posts:
         return None
 
-    return _wordpress_post_to_blog(posts[0])
+    result = _wordpress_post_to_blog(posts[0])
+    set_cache(cache_key, result)
+    return result
 
 
 def slugify_title(title: str) -> str:
