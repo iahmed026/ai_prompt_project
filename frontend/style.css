@@ -1145,6 +1145,25 @@ select:focus {
   color: var(--accent-dark);
 }
 
+.markdown-body img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 18px auto;
+  border-radius: 8px;
+}
+
+.markdown-body figure {
+  margin: 0 0 1.1em;
+}
+
+.markdown-body figcaption {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+}
+
 .blog-admin-panel {
   width: min(920px, 100%);
   margin: 0 auto;

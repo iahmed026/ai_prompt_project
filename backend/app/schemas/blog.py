@@ -31,6 +31,7 @@ class BlogRead(BlogBase):
     slug: str
     created_at: datetime
     updated_at: datetime
+    content_html: Optional[str] = None
 
     model_config = {
         "from_attributes": True,
@@ -59,3 +60,9 @@ class BlogListResponse(BaseModel):
     page: int
     page_size: int
     pages: int
+
+
+class BlogSourceResponse(BaseModel):
+    source: str
+    wordpress_site_url: str = ""
+    wordpress_admin_url: str = ""

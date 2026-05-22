@@ -1,10 +1,15 @@
+from datetime import datetime, timezone
+from html import unescape
+from html.parser import HTMLParser
 import math
 import re
 import unicodedata
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
+import httpx
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.models.blog import Blog
 from app.schemas.blog import BlogCreate, BlogUpdate
 
@@ -102,6 +107,198 @@ Ask for markdown explicitly when the result needs to be reviewed, shared, or pub
 """,
     },
 ]
+
+
+class _HTMLTextExtractor(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.parts: List[str] = []
+
+    def handle_data(self, data: str) -> None:
+        if data.strip():
+            self.parts.append(data.strip())
+
+
+def _wordpress_site_url() -> str:
+    return settings.WORDPRESS_SITE_URL.strip().rstrip("/")
+
+
+def is_wordpress_enabled() -> bool:
+    return bool(_wordpress_site_url())
+
+
+def wordpress_admin_url() -> str:
+    site_url = _wordpress_site_url()
+    return f"{site_url}/wp-admin/" if site_url else ""
+
+
+def wordpress_source() -> Dict[str, str]:
+    site_url = _wordpress_site_url()
+    return {
+        "source": "wordpress" if site_url else "local",
+        "wordpress_site_url": site_url,
+        "wordpress_admin_url": wordpress_admin_url(),
+    }
+
+
+def _wordpress_posts_url() -> str:
+    return f"{_wordpress_site_url()}/wp-json/wp/v2/posts"
+
+
+def _strip_html(value: str) -> str:
+    parser = _HTMLTextExtractor()
+    parser.feed(value or "")
+    parser.close()
+    text = " ".join(parser.parts)
+    return re.sub(r"\s+", " ", unescape(text)).strip()
+
+
+def _shorten(value: str, max_length: int) -> str:
+    value = re.sub(r"\s+", " ", value or "").strip()
+    if len(value) <= max_length:
+        return value
+
+    return value[: max_length - 1].rsplit(" ", 1)[0].rstrip(".,;:") + "..."
+
+
+def _parse_wordpress_date(value: str) -> datetime:
+    if not value:
+        return datetime.now(timezone.utc)
+
+    normalized = value.replace("Z", "+00:00")
+
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return datetime.now(timezone.utc)
+
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+
+    return parsed
+
+
+def _rendered(post: Dict[str, Any], key: str) -> str:
+    value = post.get(key) or {}
+
+    if isinstance(value, dict):
+        return str(value.get("rendered") or "")
+
+    return str(value or "")
+
+
+def _wordpress_featured_image(post: Dict[str, Any]) -> str:
+    embedded = post.get("_embedded") or {}
+    media_items = embedded.get("wp:featuredmedia") or []
+
+    if not media_items:
+        return ""
+
+    media = media_items[0] or {}
+    sizes = (media.get("media_details") or {}).get("sizes") or {}
+
+    for size in ("large", "medium_large", "full", "medium"):
+        source = (sizes.get(size) or {}).get("source_url")
+        if source:
+            return str(source)
+
+    return str(media.get("source_url") or "")
+
+
+def _wordpress_author(post: Dict[str, Any]) -> str:
+    embedded = post.get("_embedded") or {}
+    authors = embedded.get("author") or []
+
+    if authors:
+        name = _strip_html(str((authors[0] or {}).get("name") or ""))
+        if name:
+            return name
+
+    return "WordPress"
+
+
+def _wordpress_post_to_blog(post: Dict[str, Any]) -> Dict[str, Any]:
+    title = _strip_html(_rendered(post, "title")) or "Untitled"
+    content_html = _rendered(post, "content")
+    content_text = _strip_html(content_html)
+    excerpt = _strip_html(_rendered(post, "excerpt"))
+    summary = _shorten(excerpt or content_text or title, 500)
+
+    if len(summary) < 10:
+        summary = _shorten(f"{title} article from WordPress.", 500)
+
+    content = content_text or summary
+    if len(content) < 10:
+        content = f"{title}\n\n{summary}"
+
+    created_at = _parse_wordpress_date(str(post.get("date") or post.get("date_gmt") or ""))
+    updated_at = _parse_wordpress_date(str(post.get("modified") or post.get("modified_gmt") or ""))
+
+    return {
+        "id": int(post.get("id") or 0),
+        "title": title,
+        "slug": str(post.get("slug") or post.get("id") or ""),
+        "content": content,
+        "content_html": content_html,
+        "summary": summary,
+        "image_url": _wordpress_featured_image(post),
+        "author": _wordpress_author(post),
+        "created_at": created_at,
+        "updated_at": updated_at,
+        "published": post.get("status") == "publish",
+    }
+
+
+async def list_wordpress_blogs(
+    page: int = 1,
+    page_size: int = 9,
+    search: Optional[str] = None,
+) -> Tuple[List[Dict[str, Any]], int, int]:
+    safe_page = max(page, 1)
+    safe_page_size = min(max(page_size, 1), 50)
+    params = {
+        "page": safe_page,
+        "per_page": safe_page_size,
+        "status": "publish",
+        "_embed": "1",
+    }
+
+    if search:
+        params["search"] = search.strip()
+
+    async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
+        response = await client.get(_wordpress_posts_url(), params=params)
+        response.raise_for_status()
+
+    total = int(response.headers.get("X-WP-Total") or 0)
+    pages = int(response.headers.get("X-WP-TotalPages") or 1)
+    posts = response.json()
+
+    if not isinstance(posts, list):
+        posts = []
+
+    items = [_wordpress_post_to_blog(post) for post in posts]
+    return items, total or len(items), max(pages, 1)
+
+
+async def get_wordpress_blog_by_slug(slug: str) -> Optional[Dict[str, Any]]:
+    async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
+        response = await client.get(
+            _wordpress_posts_url(),
+            params={
+                "slug": slug,
+                "status": "publish",
+                "_embed": "1",
+            },
+        )
+        response.raise_for_status()
+
+    posts = response.json()
+
+    if not isinstance(posts, list) or not posts:
+        return None
+
+    return _wordpress_post_to_blog(posts[0])
 
 
 def slugify_title(title: str) -> str:

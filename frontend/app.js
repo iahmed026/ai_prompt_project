@@ -23,6 +23,8 @@ const state = {
     current: null,
     editingId: null,
     adminToken: window.localStorage.getItem('blogAdminToken') || '',
+    source: 'local',
+    wordpressAdminUrl: '',
   },
 };
 
@@ -54,6 +56,7 @@ const el = {
   blogAdminView: document.getElementById('blog-admin-view'),
   blogList: document.getElementById('blog-list'),
   blogSearch: document.getElementById('blog-search'),
+  blogAdminOpen: document.getElementById('blog-admin-open'),
   blogPrev: document.getElementById('blog-prev'),
   blogNext: document.getElementById('blog-next'),
   blogPageMeta: document.getElementById('blog-page-meta'),
@@ -155,6 +158,43 @@ function adminHeaders(includeJson = false) {
   }
 
   return headers;
+}
+
+function blogUsesWordPress() {
+  return state.blogs.source === 'wordpress';
+}
+
+function renderBlogSourceControls() {
+  if (!el.blogAdminOpen) return;
+
+  if (blogUsesWordPress()) {
+    el.blogAdminOpen.innerHTML = `
+      <i data-lucide="external-link"></i>
+      WordPress
+    `;
+    el.blogAdminOpen.title = 'Open WordPress dashboard';
+  } else {
+    el.blogAdminOpen.innerHTML = `
+      <i data-lucide="shield"></i>
+      Admin
+    `;
+    el.blogAdminOpen.title = 'Open blog admin';
+  }
+
+  refreshIcons();
+}
+
+async function loadBlogSource() {
+  try {
+    const data = await apiJson(`${API_PREFIX}/blogs/source`);
+    state.blogs.source = data.source || 'local';
+    state.blogs.wordpressAdminUrl = data.wordpress_admin_url || '';
+  } catch (error) {
+    state.blogs.source = 'local';
+    state.blogs.wordpressAdminUrl = '';
+  }
+
+  renderBlogSourceControls();
 }
 
 function setStatus(text, isError = false) {
@@ -608,6 +648,14 @@ function handleRoute() {
   }
 
   if (route === 'blogs/admin') {
+    if (blogUsesWordPress()) {
+      showBlogShell();
+      showBlogListView();
+      loadBlogs(state.blogs.page);
+      showToast('Use WordPress to manage blog posts');
+      return;
+    }
+
     showBlogShell();
     showBlogAdminView();
     return;
@@ -676,7 +724,7 @@ async function loadBlogs(page = 1) {
     params.set('search', state.blogs.search);
   }
 
-  if (state.blogs.adminToken) {
+  if (state.blogs.adminToken && !blogUsesWordPress()) {
     params.set('include_unpublished', 'true');
   }
 
@@ -750,7 +798,7 @@ function renderBlogList() {
 function blogCard(blog) {
   const date = formatDate(blog.created_at);
   const draft = !blog.published ? '<span class="draft-pill">Draft</span>' : '';
-  const adminActions = state.blogs.adminToken
+  const adminActions = state.blogs.adminToken && !blogUsesWordPress()
     ? `
       <div class="blog-card-admin">
         <button class="mini-button" type="button" data-blog-edit="${escapeAttr(blog.slug)}">
@@ -823,7 +871,7 @@ function renderBlogDetail(blog) {
     : '<div class="blog-detail-hero image-error"></div>';
 
   el.blogPageTitle.textContent = blog.title;
-  el.blogDetailEdit.hidden = !state.blogs.adminToken;
+  el.blogDetailEdit.hidden = !state.blogs.adminToken || blogUsesWordPress();
   el.blogDetail.innerHTML = `
     ${image}
     <div class="blog-detail-body">
@@ -835,7 +883,7 @@ function renderBlogDetail(blog) {
       </div>
       <h1>${escapeHtml(blog.title)}</h1>
       <p class="blog-detail-summary">${escapeHtml(blog.summary)}</p>
-      <div class="markdown-body">${markdownToHtml(blog.content)}</div>
+      <div class="markdown-body">${renderBlogContent(blog)}</div>
     </div>
   `;
 
@@ -997,6 +1045,104 @@ async function deleteBlog(blogId = state.blogs.editingId) {
   }
 }
 
+function renderBlogContent(blog) {
+  if (blog.content_html) {
+    return sanitizeContentHtml(blog.content_html);
+  }
+
+  return markdownToHtml(blog.content || '');
+}
+
+function sanitizeContentHtml(source) {
+  const template = document.createElement('template');
+  template.innerHTML = String(source || '');
+
+  const allowedTags = new Set([
+    'A',
+    'B',
+    'BLOCKQUOTE',
+    'BR',
+    'CODE',
+    'EM',
+    'FIGCAPTION',
+    'FIGURE',
+    'H1',
+    'H2',
+    'H3',
+    'H4',
+    'H5',
+    'H6',
+    'HR',
+    'I',
+    'IMG',
+    'LI',
+    'OL',
+    'P',
+    'PRE',
+    'STRONG',
+    'TABLE',
+    'TBODY',
+    'TD',
+    'TH',
+    'THEAD',
+    'TR',
+    'UL',
+  ]);
+
+  const cleanUrl = (value, image = false) => {
+    try {
+      const url = new URL(value, window.location.origin);
+      const allowedProtocols = image
+        ? ['http:', 'https:']
+        : ['http:', 'https:', 'mailto:', 'tel:'];
+
+      return allowedProtocols.includes(url.protocol) ? url.href : '';
+    } catch (error) {
+      return '';
+    }
+  };
+
+  const sanitizeNode = (node) => {
+    [...node.children].forEach(sanitizeNode);
+
+    if (!allowedTags.has(node.tagName)) {
+      node.replaceWith(...node.childNodes);
+      return;
+    }
+
+    const originalHref = node.getAttribute('href') || '';
+    const originalSrc = node.getAttribute('src') || '';
+    const originalAlt = node.getAttribute('alt') || '';
+
+    [...node.attributes].forEach((attribute) => {
+      node.removeAttribute(attribute.name);
+    });
+
+    if (node.tagName === 'A') {
+      const href = cleanUrl(originalHref);
+      if (href) {
+        node.setAttribute('href', href);
+        node.setAttribute('target', '_blank');
+        node.setAttribute('rel', 'noreferrer');
+      }
+    }
+
+    if (node.tagName === 'IMG') {
+      const src = cleanUrl(originalSrc, true);
+      if (src) {
+        node.setAttribute('src', src);
+        node.setAttribute('alt', originalAlt);
+        node.setAttribute('loading', 'lazy');
+      } else {
+        node.remove();
+      }
+    }
+  };
+
+  [...template.content.children].forEach(sanitizeNode);
+  return template.innerHTML;
+}
+
 function markdownToHtml(source) {
   // Render trusted author markdown without allowing raw HTML injection.
   const lines = String(source || '').replace(/\r\n/g, '\n').split('\n');
@@ -1156,7 +1302,18 @@ document.getElementById('cancel-niche').addEventListener('click', () => el.niche
 el.optionForm.addEventListener('submit', saveCustomOption);
 el.nicheForm.addEventListener('submit', saveCustomNiche);
 
-document.getElementById('blog-admin-open').addEventListener('click', () => navigate('blogs/admin'));
+el.blogAdminOpen.addEventListener('click', () => {
+  if (blogUsesWordPress()) {
+    if (state.blogs.wordpressAdminUrl) {
+      window.open(state.blogs.wordpressAdminUrl, '_blank', 'noopener,noreferrer');
+    } else {
+      showToast('WordPress URL is not configured');
+    }
+    return;
+  }
+
+  navigate('blogs/admin');
+});
 document.getElementById('blog-back').addEventListener('click', () => navigate('blogs'));
 document.getElementById('blog-new').addEventListener('click', resetBlogForm);
 el.blogDetailEdit.addEventListener('click', () => {
@@ -1185,4 +1342,4 @@ window.addEventListener('hashchange', handleRoute);
 
 refreshIcons();
 loadMaster();
-handleRoute();
+loadBlogSource().finally(handleRoute);

@@ -107,6 +107,8 @@ class FallbackSettings:
 
     AUTH_PASSWORD_HASH: str = ""
 
+    WORDPRESS_SITE_URL: str = ""
+
     BASE_DIR: Path = BASE_DIR
 
     PROJECT_ROOT: Path = PROJECT_ROOT
@@ -178,6 +180,8 @@ if BaseSettings and SettingsConfigDict:
         AUTH_USERNAME: str = ""
 
         AUTH_PASSWORD_HASH: str = ""
+
+        WORDPRESS_SITE_URL: str = ""
 
         BASE_DIR: Path = BASE_DIR
 
