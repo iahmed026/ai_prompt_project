@@ -38,8 +38,13 @@ def build_mock_response(final_template: str, niche_label: Optional[str] = None) 
 
 
 async def optimize_prompt(final_template: str, niche_label: Optional[str] = None) -> str:
-    if settings.USE_MOCK_LLM or not settings.OPENROUTER_API_KEY:
+    if settings.USE_MOCK_LLM:
         return build_mock_response(final_template, niche_label)
+
+    if not settings.OPENROUTER_API_KEY:
+        raise RuntimeError(
+            "OPENROUTER_API_KEY is required when USE_MOCK_LLM is false"
+        )
 
     payload: Dict[str, Any] = {
         "model": settings.OPENROUTER_MODEL,

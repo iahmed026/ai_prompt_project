@@ -88,6 +88,8 @@ async def generate_prompt(
             status_code=502,
             detail="External LLM provider request failed",
         ) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.get("/history/", response_model=PromptHistoryResponse)

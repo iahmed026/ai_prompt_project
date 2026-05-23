@@ -40,6 +40,122 @@ STRUCTURED_SELECTION_FIELDS = {
 
 PROMPT_ENGINE_VERSION = "playbook-v3"
 CLIENT_ID_PATTERN = re.compile(r"^[a-zA-Z0-9._:-]{8,120}$")
+WORD_PATTERN = re.compile(r"[a-zA-Z][a-zA-Z0-9-]{2,}")
+MIN_CONTEXT_WORDS = 3
+MIN_CONTEXT_CHARS = 15
+
+GENERIC_OR_INVALID_CONTEXTS = {
+    "test",
+    "testing",
+    "hello",
+    "hi",
+    "hey",
+    "abc",
+    "abcd",
+    "asdf",
+    "asdfgh",
+    "qwerty",
+    "random",
+    "nothing",
+    "none",
+    "n/a",
+    "na",
+}
+
+NICHE_CONTEXT_KEYWORDS = {
+    "marketing": {
+        "ad", "ads", "brand", "campaign", "content", "conversion",
+        "copy", "customer", "email", "engagement", "funnel",
+        "hook", "lead", "market", "offer", "product", "promotion",
+        "sales", "sell", "social", "traffic",
+    },
+    "saas": {
+        "api", "app", "dashboard", "feature", "integration",
+        "onboarding", "platform", "product", "release", "software",
+        "subscription", "support", "technical", "user", "workflow",
+    },
+    "education": {
+        "assignment", "class", "course", "curriculum", "education",
+        "exam", "explain", "lesson", "learn", "student", "study",
+        "syllabus", "teach", "teacher", "training", "quiz",
+    },
+    "real-estate": {
+        "agent", "apartment", "buyer", "commercial", "home",
+        "house", "investor", "land", "lease", "listing", "mortgage",
+        "property", "real", "rent", "seller", "tenant", "estate",
+    },
+    "e-commerce": {
+        "cart", "checkout", "customer", "delivery", "discount",
+        "ecommerce", "order", "online", "product", "review", "shop",
+        "shipping", "store", "supplier", "variant", "wishlist",
+    },
+}
+
+
+def _context_words(text: str) -> List[str]:
+    return [match.group(0).lower() for match in WORD_PATTERN.finditer(text)]
+
+
+def _context_error(niche_label: str) -> ValueError:
+    return ValueError(
+        f"Please provide proper context related to {niche_label}. "
+        "Include the actual topic, audience, goal, platform, and important details."
+    )
+
+
+def _niche_terms(niche: Dict[str, Any], selection: Dict[str, Any]) -> set[str]:
+    terms = set(NICHE_CONTEXT_KEYWORDS.get(str(niche.get("id", "")), set()))
+
+    searchable_values: List[Any] = [
+        niche.get("id"),
+        niche.get("label"),
+        niche.get("description"),
+        niche.get("tasks", []),
+        niche.get("constraints", []),
+        niche.get("output_formats", []),
+        niche.get("best_practices", []),
+        niche.get("target_audience", []),
+        niche.get("platforms", []),
+        niche.get("goal_types", []),
+        selection,
+    ]
+
+    for value in searchable_values:
+        if isinstance(value, dict):
+            value = list(value.values())
+
+        values = value if isinstance(value, list) else [value]
+        for item in values:
+            terms.update(_context_words(str(item or "")))
+
+    return {term for term in terms if len(term) >= 3}
+
+
+def validate_context_matches_niche(
+    payload: PromptGenerateRequest,
+    niche: Dict[str, Any],
+) -> None:
+    context = clean_text(payload.context)
+    if not context:
+        return
+
+    niche_label = clean_text(niche.get("label") or payload.niche_id, max_length=80)
+    normalized = context.lower().strip()
+    words = _context_words(context)
+
+    if (
+        len(context) < MIN_CONTEXT_CHARS
+        or len(words) < MIN_CONTEXT_WORDS
+        or normalized in GENERIC_OR_INVALID_CONTEXTS
+        or len(set(normalized)) <= 3
+    ):
+        raise _context_error(niche_label)
+
+    context_terms = set(words)
+    niche_terms = _niche_terms(niche, payload.selection or {})
+
+    if niche_terms and context_terms.isdisjoint(niche_terms):
+        raise _context_error(niche_label)
 
 
 def validate_input_has_content(payload: PromptGenerateRequest) -> None:
@@ -352,11 +468,11 @@ async def generate_prompt(
     payload: PromptGenerateRequest,
     client_id: str,
 ) -> PromptGenerateResponse:
-    # Validate that user has provided meaningful input
     validate_input_has_content(payload)
-    
+
     client_id = normalize_client_id(client_id)
     niche = get_niche_by_id(payload.niche_id)
+    validate_context_matches_niche(payload, niche)
     final_template = build_final_template(payload, niche)
     cache_key = _cache_key(payload, final_template)
 
