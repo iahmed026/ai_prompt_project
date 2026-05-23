@@ -30,7 +30,14 @@ def get_history_client_id(
 
 @router.get("/health")
 def health_check():
-    return {"status": "ok"}
+    from app.core.config import settings
+
+    return {
+        "status": "ok",
+        "use_mock_llm": settings.USE_MOCK_LLM,
+        "openrouter_api_key_configured": bool(settings.OPENROUTER_API_KEY),
+        "openrouter_model": settings.OPENROUTER_MODEL,
+    }
 
 
 @router.get("/ui-schema/")
