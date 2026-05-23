@@ -42,6 +42,48 @@ PROMPT_ENGINE_VERSION = "playbook-v3"
 CLIENT_ID_PATTERN = re.compile(r"^[a-zA-Z0-9._:-]{8,120}$")
 
 
+def validate_input_has_content(payload: PromptGenerateRequest) -> None:
+    """
+    Validate that the user has provided meaningful input.
+    Raises ValueError if the input is empty and lacks niche context.
+    """
+    selection = payload.selection or {}
+    context = clean_text(payload.context)
+    
+    # Check if any meaningful input is provided
+    has_task = bool(_selection_value(selection.get("task")))
+    has_constraints = bool(_selection_values(selection.get("constraints")))
+    has_context = bool(context)
+    has_audience = bool(_selection_value(selection.get("target_audience")))
+    has_platform = bool(_selection_value(selection.get("platform")))
+    has_goal = bool(_selection_value(selection.get("goal_type")))
+    has_format = bool(_selection_value(selection.get("output_format")))
+    has_extra = any(
+        _selection_value(v) 
+        for k, v in selection.items() 
+        if k not in STRUCTURED_SELECTION_FIELDS
+    )
+    
+    has_meaningful_input = (
+        has_task or 
+        has_constraints or 
+        has_context or 
+        has_audience or 
+        has_platform or 
+        has_goal or 
+        has_format or 
+        has_extra
+    )
+    
+    if not has_meaningful_input:
+        raise ValueError(
+            "Please provide at least one of the following: "
+            "task, context, constraints, target audience, platform, goal, "
+            "output format, or other suggestions. "
+            "Without this information, we cannot generate a relevant prompt for your niche."
+        )
+
+
 def normalize_client_id(client_id: str) -> str:
     value = clean_text(client_id, max_length=120)
 
@@ -144,19 +186,28 @@ def build_final_template(payload: PromptGenerateRequest, niche: Dict[str, Any]) 
         "- Improve weak or generic inputs by adding structure, specificity, and decision criteria.",
         "- Do not merely restate the request; turn it into a high-quality, niche-specific deliverable.",
         "- If critical information is missing, ask one concise clarifying question. Otherwise, proceed with sensible assumptions.",
-        "",
-        "Task:",
-        f"- {task or 'Use the user context to identify and complete the most useful task.'}",
-        "",
-        "Context:",
     ])
 
-    if context:
-        lines.append(f"- {context}")
-    else:
-        lines.append(
-            "- Use the selected options as the brief. Add reasonable assumptions only when they are low-risk and useful."
-        )
+    # Only include Task section if provided
+    if task:
+        lines.extend([
+            "",
+            "Task:",
+            f"- {task}",
+        ])
+
+    # Only include Context section if provided
+    if context or task:
+        lines.extend([
+            "",
+            "Context:",
+        ])
+        if context:
+            lines.append(f"- {context}")
+        elif not task:
+            lines.append(
+                "- Use the selected options as the brief. Add reasonable assumptions only when they are low-risk and useful."
+            )
 
     audience_goal_lines = []
     if target_audience:
@@ -198,17 +249,20 @@ def build_final_template(payload: PromptGenerateRequest, niche: Dict[str, Any]) 
         lines.extend(["", "Additional Selected Details:"])
         lines.extend(extra_selection_lines)
 
+    # Only include Constraints section if provided
     if constraints:
         lines.extend(["", "Mandatory Constraints:"])
         lines.extend(f"- {item}" for item in constraints)
 
     _extend_bullet_section(lines, "Niche Guardrails", playbook.guardrails)
 
-    lines.extend([
-        "",
-        "Output Format:",
-        f"- {output_format or 'Choose the clearest format for the task.'}",
-    ])
+    # Only include Output Format section if provided
+    if output_format:
+        lines.extend([
+            "",
+            "Output Format:",
+            f"- {output_format}",
+        ])
 
     _extend_bullet_section(lines, "Recommended Output Architecture", playbook.prompt_sections)
 
@@ -298,6 +352,9 @@ async def generate_prompt(
     payload: PromptGenerateRequest,
     client_id: str,
 ) -> PromptGenerateResponse:
+    # Validate that user has provided meaningful input
+    validate_input_has_content(payload)
+    
     client_id = normalize_client_id(client_id)
     niche = get_niche_by_id(payload.niche_id)
     final_template = build_final_template(payload, niche)

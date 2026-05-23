@@ -79,6 +79,8 @@ async def generate_prompt(
 ):
     try:
         return await prompt_service.generate_prompt(db, payload, client_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except HTTPError as exc:
