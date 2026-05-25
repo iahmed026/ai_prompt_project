@@ -78,7 +78,7 @@ async def read_blogs(
     )
 
     return BlogListResponse(
-        items=records,
+        items=[blog_service.blog_to_item(record) for record in records],
         total=total,
         page=page,
         page_size=page_size,
@@ -119,7 +119,7 @@ async def read_blog(
     if not record:
         raise HTTPException(status_code=404, detail="Blog not found")
 
-    return record
+    return blog_service.blog_to_read(record)
 
 
 @router.post(
@@ -133,7 +133,7 @@ def create_blog(
     db: Session = Depends(get_db),
 ):
     require_local_blog_storage()
-    return blog_service.create_blog(db, payload)
+    return blog_service.blog_to_read(blog_service.create_blog(db, payload))
 
 
 @router.put("/{blog_id}", response_model=BlogRead)
@@ -149,7 +149,7 @@ def update_blog(
     if not record:
         raise HTTPException(status_code=404, detail="Blog not found")
 
-    return record
+    return blog_service.blog_to_read(record)
 
 
 @router.delete("/{blog_id}", status_code=status.HTTP_204_NO_CONTENT)

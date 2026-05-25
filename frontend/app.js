@@ -61,6 +61,7 @@ const el = {
   blogSearch: document.getElementById('blog-search'),
   blogPrev: document.getElementById('blog-prev'),
   blogNext: document.getElementById('blog-next'),
+  blogPagination: document.querySelector('.blog-pagination'),
   blogPageMeta: document.getElementById('blog-page-meta'),
   blogDetail: document.getElementById('blog-detail'),
   blogDetailEdit: document.getElementById('blog-detail-edit'),
@@ -814,6 +815,7 @@ async function loadBlogs(page = 1) {
   } catch (error) {
     el.blogList.innerHTML = `<div class="empty-state">Could not load blogs: ${escapeHtml(error.message)}</div>`;
     el.blogPageMeta.textContent = 'Unavailable';
+    el.blogPagination.hidden = true;
     showToast(error.message);
   }
 }
@@ -829,6 +831,7 @@ function renderBlogLoading() {
       </div>
     </article>
   `).join('');
+  el.blogPagination.hidden = false;
   el.blogPageMeta.textContent = 'Loading';
   el.blogPrev.disabled = true;
   el.blogNext.disabled = true;
@@ -838,7 +841,7 @@ function renderBlogList() {
   const blogs = state.blogs.items;
 
   if (!blogs.length) {
-    el.blogList.innerHTML = '<div class="empty-state">No blogs found</div>';
+    el.blogList.innerHTML = blogEmptyState();
   } else {
     el.blogList.innerHTML = blogs.map((blog) => blogCard(blog)).join('');
   }
@@ -846,6 +849,7 @@ function renderBlogList() {
   el.blogPageMeta.textContent = `Page ${state.blogs.page} of ${state.blogs.pages}`;
   el.blogPrev.disabled = state.blogs.page <= 1;
   el.blogNext.disabled = state.blogs.page >= state.blogs.pages;
+  el.blogPagination.hidden = state.blogs.pages <= 1 || !blogs.length;
 
   el.blogList.querySelectorAll('[data-blog-read]').forEach((button) => {
     button.addEventListener('click', () => navigate(`blogs/${encodeURIComponent(button.dataset.blogRead)}`));
@@ -859,14 +863,124 @@ function renderBlogList() {
     button.addEventListener('click', () => deleteBlog(Number(button.dataset.blogDelete)));
   });
 
+  el.blogList.querySelectorAll('[data-blog-clear-search]').forEach((button) => {
+    button.addEventListener('click', clearBlogSearch);
+  });
+
   el.blogList.querySelectorAll('img').forEach((image) => {
     image.addEventListener('error', () => {
-      image.hidden = true;
-      image.parentElement.classList.add('image-error');
+      renderBlogMediaFallback(image.parentElement);
     });
   });
 
   refreshIcons();
+}
+
+function blogEmptyState() {
+  const query = state.blogs.search || '';
+
+  if (!query) {
+    return '<div class="empty-state">No blogs found</div>';
+  }
+
+  return `
+    <div class="blog-empty-state">
+      <i data-lucide="search-x"></i>
+      <strong>No results found</strong>
+      <p>No articles matched "${escapeHtml(query)}". Try another keyword or clear the search.</p>
+      <button class="ghost-button" type="button" data-blog-clear-search>
+        <i data-lucide="x"></i>
+        Clear Search
+      </button>
+    </div>
+  `;
+}
+
+function clearBlogSearch() {
+  state.blogs.search = '';
+  el.blogSearch.value = '';
+  loadBlogs(1);
+}
+
+function estimateReadTimeFromText(text) {
+  const words = String(text || '').trim().split(/\s+/).filter(Boolean).length;
+  return Math.max(1, Math.ceil(words / 220));
+}
+
+function blogReadTime(blog) {
+  const minutes = Number(blog.read_time_minutes)
+    || estimateReadTimeFromText(`${blog.title || ''} ${blog.summary || ''} ${blog.content || ''}`);
+
+  return `${minutes} min read`;
+}
+
+function blogTags(blog) {
+  const tags = Array.isArray(blog.tags) ? blog.tags : [];
+  const fallback = `${blog.title || ''} ${blog.summary || ''}`.toLowerCase();
+  const inferred = [];
+
+  if (fallback.includes('prompt')) inferred.push('Prompt Engineering');
+  if (fallback.includes('ai')) inferred.push('AI Tips');
+  if (fallback.includes('workflow') || fallback.includes('template')) inferred.push('Workflows');
+
+  return [...tags, ...inferred]
+    .map((tag) => String(tag || '').trim())
+    .filter(Boolean)
+    .filter((tag, index, all) => all.findIndex((item) => item.toLowerCase() === tag.toLowerCase()) === index)
+    .slice(0, 4);
+}
+
+function formatTag(tag) {
+  const normalized = String(tag || '')
+    .replace(/^#/, '')
+    .replace(/[^a-zA-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+  return normalized ? `#${normalized}` : '';
+}
+
+function blogTagPills(blog) {
+  const tags = blogTags(blog)
+    .map((tag) => formatTag(tag))
+    .filter(Boolean);
+
+  if (!tags.length) return '';
+
+  return `
+    <div class="blog-tag-list">
+      ${tags.map((tag) => `<span class="blog-tag-pill">${escapeHtml(tag)}</span>`).join('')}
+    </div>
+  `;
+}
+
+function blogFallbackGraphic() {
+  return `
+    <svg class="blog-fallback-svg" viewBox="0 0 640 360" role="img" aria-label="Article illustration" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="blog-fallback-bg" x1="0" x2="1" y1="0" y2="1">
+          <stop offset="0" stop-color="#e7f4f1"/>
+          <stop offset="0.55" stop-color="#f8fafc"/>
+          <stop offset="1" stop-color="#fff4df"/>
+        </linearGradient>
+      </defs>
+      <rect width="640" height="360" rx="0" fill="url(#blog-fallback-bg)"/>
+      <rect x="92" y="78" width="456" height="218" rx="24" fill="#ffffff" opacity="0.76"/>
+      <rect x="132" y="118" width="196" height="18" rx="9" fill="#0f8b7f" opacity="0.22"/>
+      <rect x="132" y="154" width="376" height="14" rx="7" fill="#17211d" opacity="0.15"/>
+      <rect x="132" y="184" width="316" height="14" rx="7" fill="#17211d" opacity="0.12"/>
+      <rect x="132" y="226" width="124" height="34" rx="17" fill="#0f8b7f" opacity="0.9"/>
+      <circle cx="476" cy="126" r="38" fill="#c77700" opacity="0.18"/>
+      <path d="M424 244c42-62 88-70 138-24v76H374c12-18 28-35 50-52Z" fill="#0f8b7f" opacity="0.16"/>
+    </svg>
+  `;
+}
+
+function renderBlogMediaFallback(container) {
+  if (!container) return;
+
+  container.classList.remove('image-error');
+  container.classList.add('no-image');
+  container.innerHTML = blogFallbackGraphic();
 }
 
 function blogCard(blog) {
@@ -887,20 +1001,22 @@ function blogCard(blog) {
     `
     : '';
   const image = blog.image_url
-    ? `<img src="${escapeAttr(blog.image_url)}" alt="${escapeAttr(blog.title)}">`
-    : '';
+    ? `<img src="${escapeAttr(blog.image_url)}" alt="${escapeAttr(blog.title)}" loading="lazy" decoding="async">`
+    : blogFallbackGraphic();
 
   return `
     <article class="blog-card">
-      <div class="blog-card-media ${blog.image_url ? '' : 'image-error'}">
+      <div class="blog-card-media ${blog.image_url ? '' : 'no-image'}">
         ${image}
       </div>
       <div class="blog-card-body">
         <div class="blog-card-meta">
           <span>${escapeHtml(blog.author || 'Prompt Studio Team')}</span>
           <span>${escapeHtml(date)}</span>
+          <span>${escapeHtml(blogReadTime(blog))}</span>
           ${draft}
         </div>
+        ${blogTagPills(blog)}
         <h2>${escapeHtml(blog.title)}</h2>
         <p>${escapeHtml(blog.summary)}</p>
         <div class="blog-card-actions">
@@ -941,8 +1057,8 @@ function renderBlogDetail(blog) {
   const date = formatDate(blog.created_at);
   const updated = formatDate(blog.updated_at);
   const image = blog.image_url
-    ? `<div class="blog-detail-hero"><img src="${escapeAttr(blog.image_url)}" alt="${escapeAttr(blog.title)}"></div>`
-    : '<div class="blog-detail-hero image-error"></div>';
+    ? `<div class="blog-detail-hero"><img src="${escapeAttr(blog.image_url)}" alt="${escapeAttr(blog.title)}" loading="lazy" decoding="async"></div>`
+    : `<div class="blog-detail-hero no-image">${blogFallbackGraphic()}</div>`;
 
   el.blogPageTitle.textContent = blog.title;
   el.blogDetailEdit.hidden = !state.blogs.adminToken || blogUsesWordPress();
@@ -952,9 +1068,11 @@ function renderBlogDetail(blog) {
       <div class="blog-detail-meta">
         <span>${escapeHtml(blog.author)}</span>
         <span>${escapeHtml(date)}</span>
+        <span>${escapeHtml(blogReadTime(blog))}</span>
         ${blog.updated_at !== blog.created_at ? `<span>Updated ${escapeHtml(updated)}</span>` : ''}
         ${blog.published ? '' : '<span class="draft-pill">Draft</span>'}
       </div>
+      ${blogTagPills(blog)}
       <h1>${escapeHtml(blog.title)}</h1>
       <p class="blog-detail-summary">${escapeHtml(blog.summary)}</p>
       <div class="markdown-body">${renderBlogContent(blog)}</div>
@@ -963,8 +1081,7 @@ function renderBlogDetail(blog) {
 
   el.blogDetail.querySelectorAll('img').forEach((imageNode) => {
     imageNode.addEventListener('error', () => {
-      imageNode.hidden = true;
-      imageNode.parentElement.classList.add('image-error');
+      renderBlogMediaFallback(imageNode.parentElement);
     });
   });
 

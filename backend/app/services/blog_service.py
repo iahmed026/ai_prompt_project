@@ -16,6 +16,19 @@ from app.models.blog import Blog
 from app.schemas.blog import BlogCreate, BlogUpdate
 
 
+PROMPT_GENERATOR_SUMMARY = (
+    "Learn how to transform vague, single-word AI prompts into highly detailed, "
+    "context-aware frameworks that deliver perfect results every time."
+)
+
+DEFAULT_WORDPRESS_TITLES = {
+    "hello world",
+    "hello world!",
+}
+
+WORDS_PER_MINUTE = 220
+
+
 DEMO_BLOGS = [
     {
         "title": "How to Turn a Rough Idea Into a Strong AI Prompt",
@@ -207,6 +220,88 @@ def _shorten(value: str, max_length: int) -> str:
     return value[: max_length - 1].rsplit(" ", 1)[0].rstrip(".,;:") + "..."
 
 
+def _normalized_title(value: str) -> str:
+    return re.sub(r"\s+", " ", _strip_html(value).lower()).strip()
+
+
+def _is_default_wordpress_post(post: Dict[str, Any]) -> bool:
+    title = _normalized_title(_rendered(post, "title"))
+    slug = str(post.get("slug") or "").strip().lower()
+    return title in DEFAULT_WORDPRESS_TITLES or slug == "hello-world"
+
+
+def _clean_summary(title: str, summary: str) -> str:
+    if _normalized_title(title) == "prompt generator":
+        return PROMPT_GENERATOR_SUMMARY
+
+    return summary
+
+
+def _estimate_read_time(*parts: str) -> int:
+    text = " ".join(part or "" for part in parts)
+    words = re.findall(r"\b[\w'-]+\b", _strip_html(text))
+    return max(1, math.ceil(len(words) / WORDS_PER_MINUTE))
+
+
+def _dedupe_tags(values: List[str], limit: int = 4) -> List[str]:
+    tags: List[str] = []
+    seen = set()
+
+    for value in values:
+        tag = _strip_html(str(value or "")).strip()
+        key = tag.lower()
+
+        if not tag or key in seen or key in {"uncategorized"}:
+            continue
+
+        seen.add(key)
+        tags.append(tag)
+
+        if len(tags) >= limit:
+            break
+
+    return tags
+
+
+def _infer_tags(title: str, content: str = "") -> List[str]:
+    haystack = f"{title} {content}".lower()
+    tags: List[str] = []
+
+    if "prompt" in haystack:
+        tags.append("Prompt Engineering")
+
+    if "ai" in haystack or "artificial intelligence" in haystack:
+        tags.append("AI Tips")
+
+    if "markdown" in haystack:
+        tags.append("Markdown")
+
+    if "workflow" in haystack or "template" in haystack:
+        tags.append("Workflows")
+
+    if "marketing" in haystack:
+        tags.append("Marketing")
+
+    return _dedupe_tags(tags or ["AI Tips", "Prompt Engineering"])
+
+
+def _wordpress_terms(post: Dict[str, Any]) -> List[str]:
+    embedded = post.get("_embedded") or {}
+    term_groups = embedded.get("wp:term") or []
+    terms: List[str] = []
+
+    for group in term_groups:
+        for term in group or []:
+            taxonomy = str(term.get("taxonomy") or "")
+
+            if taxonomy not in {"category", "post_tag"}:
+                continue
+
+            terms.append(str(term.get("name") or ""))
+
+    return _dedupe_tags(terms)
+
+
 def _parse_wordpress_date(value: str) -> datetime:
     if not value:
         return datetime.now(timezone.utc)
@@ -269,6 +364,7 @@ def _wordpress_post_to_blog(post: Dict[str, Any]) -> Dict[str, Any]:
     content_text = _strip_html(content_html)
     excerpt = _strip_html(_rendered(post, "excerpt"))
     summary = _shorten(excerpt or content_text or title, 500)
+    summary = _clean_summary(title, summary)
 
     if len(summary) < 10:
         summary = _shorten(f"{title} article from WordPress.", 500)
@@ -292,6 +388,8 @@ def _wordpress_post_to_blog(post: Dict[str, Any]) -> Dict[str, Any]:
         "created_at": created_at,
         "updated_at": updated_at,
         "published": post.get("status") == "publish",
+        "tags": _wordpress_terms(post) or _infer_tags(title, content_text),
+        "read_time_minutes": _estimate_read_time(title, summary, content_text),
     }
 
 
@@ -353,14 +451,21 @@ async def list_wordpress_blogs(
         response = await _get_wordpress_posts_response(client, params)
 
     total = int(response.headers.get("X-WP-Total") or 0)
-    pages = int(response.headers.get("X-WP-TotalPages") or 1)
     posts = response.json()
 
     if not isinstance(posts, list):
         posts = []
 
-    items = [_wordpress_post_to_blog(post) for post in posts]
-    result = (items, total or len(items), max(pages, 1))
+    visible_posts = [
+        post
+        for post in posts
+        if not _is_default_wordpress_post(post)
+    ]
+    skipped = len(posts) - len(visible_posts)
+    items = [_wordpress_post_to_blog(post) for post in visible_posts]
+    total = max(0, (total or len(items)) - skipped)
+    pages = max(math.ceil(total / safe_page_size), 1)
+    result = (items, total, pages)
     set_cache(cache_key, result)
     return result
 
@@ -392,9 +497,35 @@ async def get_wordpress_blog_by_slug(slug: str) -> Optional[Dict[str, Any]]:
     if not isinstance(posts, list) or not posts:
         return None
 
+    if _is_default_wordpress_post(posts[0]):
+        return None
+
     result = _wordpress_post_to_blog(posts[0])
     set_cache(cache_key, result)
     return result
+
+
+def blog_to_item(record: Blog) -> Dict[str, Any]:
+    return {
+        "id": record.id,
+        "title": record.title,
+        "slug": record.slug,
+        "summary": _clean_summary(record.title, record.summary),
+        "image_url": record.image_url,
+        "author": record.author,
+        "created_at": record.created_at,
+        "updated_at": record.updated_at,
+        "published": record.published,
+        "tags": _infer_tags(record.title, record.content),
+        "read_time_minutes": _estimate_read_time(record.title, record.summary, record.content),
+    }
+
+
+def blog_to_read(record: Blog) -> Dict[str, Any]:
+    data = blog_to_item(record)
+    data["content"] = record.content
+    data["content_html"] = None
+    return data
 
 
 def slugify_title(title: str) -> str:

@@ -32,6 +32,8 @@ class BlogRead(BlogBase):
     created_at: datetime
     updated_at: datetime
     content_html: Optional[str] = None
+    tags: List[str] = Field(default_factory=list)
+    read_time_minutes: int = 1
 
     model_config = {
         "from_attributes": True,
@@ -48,6 +50,8 @@ class BlogListItem(BaseModel):
     created_at: datetime
     updated_at: datetime
     published: bool
+    tags: List[str] = Field(default_factory=list)
+    read_time_minutes: int = 1
 
     model_config = {
         "from_attributes": True,
