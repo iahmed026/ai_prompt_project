@@ -37,6 +37,11 @@ def health_check():
         "use_mock_llm": settings.USE_MOCK_LLM,
         "openrouter_api_key_configured": bool(settings.OPENROUTER_API_KEY),
         "openrouter_model": settings.OPENROUTER_MODEL,
+        "llm_mode": (
+            "openrouter"
+            if settings.OPENROUTER_API_KEY and not settings.USE_MOCK_LLM
+            else "mock"
+        ),
     }
 
 
