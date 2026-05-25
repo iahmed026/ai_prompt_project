@@ -38,6 +38,8 @@ const el = {
   nicheTitle: document.getElementById('niche-title'),
   context: document.getElementById('context'),
   output: document.getElementById('output'),
+  outputLoader: document.getElementById('output-loader'),
+  outputEmpty: document.getElementById('output-empty'),
   resultMeta: document.getElementById('result-meta'),
   schemaStatus: document.getElementById('schema-status'),
   selectionCount: document.getElementById('selection-count'),
@@ -115,7 +117,13 @@ function refreshIcons() {
 }
 
 function showToast(message) {
-  el.toast.textContent = message;
+  const isAlert = /(error|failed|unavailable|could not|nothing|empty|required|no )/i.test(message);
+  const icon = isAlert ? 'alert-circle' : 'check-circle';
+  el.toast.innerHTML = `
+    <span class="toast-icon ${isAlert ? 'alert' : ''}"><i data-lucide="${icon}"></i></span>
+    <span>${escapeHtml(message)}</span>
+  `;
+  refreshIcons();
   el.toast.classList.add('show');
   window.clearTimeout(showToast.timeoutId);
   showToast.timeoutId = window.setTimeout(() => {
@@ -196,6 +204,48 @@ function selectedCount() {
 function updateSelectionCount() {
   const count = selectedCount();
   el.selectionCount.textContent = `${count} selected`;
+  el.selectionCount.classList.toggle('has-selection', count > 0);
+}
+
+function setResultStatus(text, tone = 'ready') {
+  el.resultMeta.textContent = text;
+  el.resultMeta.classList.remove('is-loading', 'is-success', 'is-error');
+
+  if (tone !== 'ready') {
+    el.resultMeta.classList.add(`is-${tone}`);
+  }
+}
+
+function setOutputState(mode, text = '') {
+  const isLoading = mode === 'loading';
+  const hasOutput = mode === 'output' && Boolean(text.trim());
+
+  el.outputLoader.hidden = !isLoading;
+  el.outputEmpty.hidden = isLoading || hasOutput;
+  el.output.hidden = !hasOutput;
+  el.output.textContent = hasOutput ? text : '';
+}
+
+async function writeClipboard(text) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.top = '-1000px';
+  document.body.appendChild(textarea);
+  textarea.select();
+
+  const copied = document.execCommand('copy');
+  textarea.remove();
+
+  if (!copied) {
+    throw new Error('Clipboard unavailable');
+  }
 }
 
 async function loadMaster() {
@@ -229,6 +279,9 @@ function renderNicheList() {
     const button = document.createElement('button');
     const optionCount =
       (niche.tasks?.length || 0) +
+      (niche.target_audience?.length || 0) +
+      (niche.platforms?.length || 0) +
+      (niche.goal_types?.length || 0) +
       (niche.constraints?.length || 0) +
       (niche.output_formats?.length || 0);
 
@@ -254,6 +307,8 @@ async function loadNiche(nicheId) {
     state.currentNiche = await apiJson(`${API_PREFIX}/ui-schema/niches/${encodeURIComponent(nicheId)}`);
     state.selection = {};
     el.nicheTitle.textContent = state.currentNiche.label || 'Prompt Builder';
+    setOutputState('empty');
+    setResultStatus('Ready');
     renderNicheList();
     renderSchemaArea();
     updateSelectionCount();
@@ -271,7 +326,7 @@ function optionGroup(title, items, key, mode = 'single') {
       ? (state.selection[key] || []).includes(item)
       : state.selection[key] === item;
     return `
-      <button class="choice-button ${selected ? 'selected' : ''}" type="button" data-key="${key}" data-value="${escapeAttr(item)}" data-mode="${mode}">
+      <button class="choice-button ${selected ? 'selected' : ''}" type="button" data-key="${key}" data-value="${escapeAttr(item)}" data-mode="${mode}" aria-pressed="${selected ? 'true' : 'false'}">
         ${escapeHtml(item)}
       </button>
     `;
@@ -291,7 +346,7 @@ function segmentGroup(title, items, key) {
   const buttons = items.map((item) => {
     const selected = state.selection[key] === item.id;
     return `
-      <button class="segment-button ${selected ? 'selected' : ''}" type="button" data-key="${key}" data-value="${escapeAttr(item.id)}" data-mode="single">
+      <button class="segment-button ${selected ? 'selected' : ''}" type="button" data-key="${key}" data-value="${escapeAttr(item.id)}" data-mode="single" aria-pressed="${selected ? 'true' : 'false'}">
         ${escapeHtml(item.label)}
       </button>
     `;
@@ -370,8 +425,8 @@ async function generatePrompt() {
 
   const button = document.getElementById('generate');
   button.disabled = true;
-  el.resultMeta.textContent = 'Generating';
-  el.output.textContent = '';
+  setResultStatus('Generating', 'loading');
+  setOutputState('loading');
 
   const payload = {
     niche_id: state.currentNiche.id,
@@ -389,12 +444,12 @@ async function generatePrompt() {
       body: JSON.stringify(payload),
     });
 
-    el.output.textContent = data.optimized_prompt || '';
-    el.resultMeta.textContent = data.cached ? 'Cached' : 'Fresh';
+    setOutputState('output', data.optimized_prompt || '');
+    setResultStatus(data.cached ? 'Cached' : 'Fresh', 'success');
     await loadHistory();
   } catch (error) {
-    el.resultMeta.textContent = 'Error';
-    el.output.textContent = error.message;
+    setOutputState('output', error.message);
+    setResultStatus('Error', 'error');
   } finally {
     button.disabled = false;
   }
@@ -406,15 +461,19 @@ async function copyOutput(text = el.output.textContent) {
     return;
   }
 
-  await navigator.clipboard.writeText(text);
-  showToast('Copied');
+  try {
+    await writeClipboard(text);
+    showToast('Prompt copied');
+  } catch (error) {
+    showToast('Clipboard unavailable');
+  }
 }
 
 function clearWorkspace() {
   state.selection = {};
   el.context.value = '';
-  el.output.textContent = '';
-  el.resultMeta.textContent = 'Ready';
+  setOutputState('empty');
+  setResultStatus('Ready');
   renderSchemaArea();
   updateSelectionCount();
 }
@@ -468,8 +527,8 @@ function renderHistory() {
   el.historyList.querySelectorAll('[data-history-view]').forEach((button) => {
     button.addEventListener('click', () => {
       const item = state.history[Number(button.dataset.historyView)];
-      el.output.textContent = item.optimized_prompt || '';
-      el.resultMeta.textContent = item.cached ? 'Cached' : 'History';
+      setOutputState('output', item.optimized_prompt || '');
+      setResultStatus(item.cached ? 'Cached' : 'History', 'success');
     });
   });
 

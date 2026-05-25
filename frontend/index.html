@@ -110,14 +110,33 @@
               <h2>Optimized Prompt</h2>
             </div>
             <div class="output-actions">
-              <span id="result-meta" class="soft-pill">Ready</span>
+              <span id="result-meta" class="soft-pill" aria-live="polite">Ready</span>
               <button id="copy" class="icon-button" type="button" title="Copy prompt" aria-label="Copy prompt">
                 <i data-lucide="copy"></i>
               </button>
             </div>
           </div>
 
-          <pre id="output" class="prompt-output"></pre>
+          <div class="output-stage">
+            <div id="output-loader" class="output-loader" hidden aria-hidden="true">
+              <span class="loader-line short"></span>
+              <span class="loader-line long"></span>
+              <span class="loader-line medium"></span>
+              <span class="loader-line medium-short"></span>
+              <span class="loader-line title"></span>
+              <span class="loader-line full"></span>
+              <span class="loader-line long"></span>
+            </div>
+
+            <div id="output-empty" class="output-empty">
+              <span class="output-empty-icon">
+                <i data-lucide="terminal"></i>
+              </span>
+              <p>Select options, add context, then generate an optimized prompt.</p>
+            </div>
+
+            <pre id="output" class="prompt-output" aria-live="polite" hidden></pre>
+          </div>
         </section>
       </div>
 
