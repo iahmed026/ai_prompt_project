@@ -29,6 +29,8 @@ const state = {
 };
 
 const el = {
+  landingView: document.getElementById('landing-view'),
+  homeHero: document.getElementById('home-hero'),
   appShell: document.querySelector('.app-shell'),
   blogView: document.getElementById('blog-view'),
   aboutView: document.getElementById('about-view'),
@@ -637,6 +639,17 @@ function setActiveNav(action) {
 
 function showHomeRoute() {
   setActiveNav('home');
+  el.landingView.hidden = false;
+  el.appShell.hidden = true;
+  el.blogView.hidden = true;
+  el.aboutView.hidden = true;
+  el.contactView.hidden = true;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function showBuilderRoute() {
+  setActiveNav('home');
+  el.landingView.hidden = true;
   el.appShell.hidden = false;
   el.blogView.hidden = true;
   el.aboutView.hidden = true;
@@ -646,6 +659,7 @@ function showHomeRoute() {
 
 function showBlogShell() {
   setActiveNav('blogs');
+  el.landingView.hidden = true;
   el.appShell.hidden = true;
   el.blogView.hidden = false;
   el.aboutView.hidden = true;
@@ -655,6 +669,7 @@ function showBlogShell() {
 
 function showAboutRoute() {
   setActiveNav('about');
+  el.landingView.hidden = true;
   el.appShell.hidden = true;
   el.blogView.hidden = true;
   el.aboutView.hidden = false;
@@ -665,6 +680,7 @@ function showAboutRoute() {
 
 function showContactRoute() {
   setActiveNav('contact');
+  el.landingView.hidden = true;
   el.appShell.hidden = true;
   el.blogView.hidden = true;
   el.aboutView.hidden = true;
@@ -702,6 +718,11 @@ function handleRoute() {
 
   if (route === 'home') {
     showHomeRoute();
+    return;
+  }
+
+  if (route === 'builder') {
+    showBuilderRoute();
     return;
   }
 
@@ -1477,6 +1498,19 @@ document.getElementById('refresh').addEventListener('click', loadMaster);
 document.getElementById('refresh-history').addEventListener('click', loadHistory);
 document.querySelectorAll('[data-nav-action]').forEach((button) => {
   button.addEventListener('click', () => handleNav(button.dataset.navAction));
+});
+document.querySelectorAll('[data-builder-action], [data-hero-action="builder"]').forEach((button) => {
+  button.addEventListener('click', () => {
+    navigate('builder');
+  });
+});
+document.querySelectorAll('[data-scroll-target]').forEach((button) => {
+  button.addEventListener('click', () => {
+    document.getElementById(button.dataset.scrollTarget)?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    });
+  });
 });
 document.getElementById('add-option').addEventListener('click', () => {
   el.optionDialog.showModal();
