@@ -30,7 +30,6 @@ import {
   Zap,
 } from 'lucide-react';
 import './styles.css';
-import heroPromptImage from './assets/hero-prompt-optimization.png';
 
 const API_PREFIX = window.location.port === '5173'
   ? 'http://127.0.0.1:8000/api/v1'
@@ -265,12 +264,17 @@ function App() {
   }
 
   function handleNav(action) {
-    if (action === 'services' || action === 'how') {
+    if (action === 'services' || action === 'how' || action === 'contact') {
+      const targetId = action === 'services'
+        ? 'services'
+        : action === 'how'
+          ? 'how-it-works'
+          : 'contact-footer';
       if (route !== 'home') {
         navigate('home');
-        window.setTimeout(() => smoothScrollTo(action === 'services' ? 'services' : 'how-it-works'), 80);
+        window.setTimeout(() => smoothScrollTo(targetId), 80);
       } else {
-        smoothScrollTo(action === 'services' ? 'services' : 'how-it-works');
+        smoothScrollTo(targetId);
       }
       return;
     }
@@ -529,14 +533,14 @@ function AppLoader() {
 function AppHeader({ route, onNav, onBuilder }) {
   const nav = [
     ['home', 'Home'],
-    ['blogs', 'Blogs'],
-    ['history', 'History'],
+    ['services', 'Services'],
+    ['how', 'How it works'],
     ['contact', 'Contact us'],
   ];
 
   return (
     <motion.header
-      className="app-header"
+      className={`app-header ${route === 'home' ? 'home-header' : 'sub-header'}`}
       initial={{ opacity: 0, y: -24 }}
       animate={{ opacity: 1, y: 0 }}
       transition={motionTokens.page}
@@ -573,21 +577,17 @@ function LogoMark() {
 
 function LandingPage({ onScroll, onBuilder }) {
   const services = [
-    ['Smart Prompt Optimization', 'Transform rough instructions into structured, context-aware prompts optimized for better AI responses.'],
-    ['Fast Results', 'Generate optimized prompts within seconds through a streamlined and efficient workflow.'],
-    ['Reusable Prompt History', 'Save, copy, and reuse your best prompts for future campaigns, product work, or client delivery.'],
+    [Sparkles, 'AI Prompt Builder', 'Turn rough instructions into structured prompts with audience, tone, constraints, and output format already aligned.'],
+    [Rocket, 'Fast Generation', 'Move from brief to usable prompt in seconds without losing context or clarity.'],
+    [Clipboard, 'Reusable History', 'Keep high-performing prompts ready for campaigns, product work, and client delivery.'],
+    [BarChart3, 'Prompt Scoring', 'Check clarity, relevance, specificity, and completeness before sending the prompt to an AI tool.'],
   ];
 
   return (
     <>
       <section className="hero-section">
-        <motion.div
-          className="hero-backdrop"
-          style={{ backgroundImage: `url(${heroPromptImage})` }}
-          initial={{ scale: 1.05, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-        />
+        <div className="hero-ambient" />
+        <PromptOptimizationScene />
         <div className="hero-pink-panel" />
         <motion.div
           className="hero-copy"
@@ -608,15 +608,8 @@ function LandingPage({ onScroll, onBuilder }) {
             <MotionButton className="gradient-button hero-cta" onClick={onBuilder}>Book a Call</MotionButton>
           </div>
         </motion.div>
-        <motion.div
-          className="hero-side-card"
-          initial={{ opacity: 0, x: 70, scale: 0.96 }}
-          animate={{ opacity: 1, x: 0, scale: 1 }}
-          transition={{ ...motionTokens.page, delay: 0.2 }}
-          whileHover={{ y: -8, scale: 1.015 }}
-        >
-          <img src={heroPromptImage} alt="Prompt optimization interface on a laptop" />
-        </motion.div>
+        <HeroShowcaseCard />
+        <PromptMemoryCard />
         <div className="hero-dots" aria-hidden="true">
           <span />
           <span />
@@ -625,27 +618,33 @@ function LandingPage({ onScroll, onBuilder }) {
       </section>
 
       <section id="services" className="services-section">
-        {services.map(([title, body], index) => (
+        <motion.div className="section-kicker" {...sectionReveal}>
+          <span>Services</span>
+          <h2>AI Prompt Generator Services</h2>
+        </motion.div>
+        <div className="service-grid">
+        {services.map(([Icon, title, body], index) => (
           <motion.article
             key={title}
-            className="service-row"
+            className="service-card"
             {...sectionReveal}
             transition={{ ...motionTokens.page, delay: index * 0.06 }}
+            whileHover={{ y: -7, scale: 1.012 }}
           >
-            <div>
-              <h2>{title}</h2>
-              <p>{body}</p>
-            </div>
             <motion.div
               className="service-visual"
-              whileHover={{ scale: 1.03, rotate: index === 1 ? 1.4 : -1.4 }}
+              animate={{ y: [0, -8, 0] }}
+              transition={{ duration: 3 + index * 0.18, repeat: Infinity, ease: 'easeInOut' }}
             >
-              {index === 0 && <Sparkles size={92} />}
-              {index === 1 && <Rocket size={92} />}
-              {index === 2 && <Clipboard size={92} />}
+              <Icon size={46} />
             </motion.div>
+            <div>
+              <h3>{title}</h3>
+              <p>{body}</p>
+            </div>
           </motion.article>
         ))}
+        </div>
       </section>
 
       <section id="how-it-works" className="process-section">
@@ -682,13 +681,160 @@ function LandingPage({ onScroll, onBuilder }) {
           <h2>Start Creating <span>Better</span><br />AI Prompts Today</h2>
           <MotionButton className="gradient-button" onClick={onBuilder}>Get Started</MotionButton>
         </div>
-        <motion.div className="cta-image-card" whileHover={{ y: -8, scale: 1.015 }}>
-          <img src={heroPromptImage} alt="AI workspace preview" />
+        <motion.div className="cta-code-card" whileHover={{ y: -8, scale: 1.015 }}>
+          <MiniPromptWorkspace />
         </motion.div>
       </motion.section>
 
       <ContactBand onScroll={onScroll} />
     </>
+  );
+}
+
+function PromptOptimizationScene() {
+  const analysis = ['Intent Detection', 'Context Understanding', 'Keyword Enhancement', 'Structure Improvement', 'Clarity Boost'];
+  const bars = [78, 72, 82, 86];
+
+  return (
+    <div className="prompt-scene" aria-hidden="true">
+      <motion.div
+        className="analysis-panel"
+        initial={{ opacity: 0, x: -80, rotate: -4 }}
+        animate={{ opacity: 1, x: 0, rotate: -2 }}
+        transition={{ ...motionTokens.page, delay: 0.2 }}
+      >
+        <h3>AI Analysis</h3>
+        {analysis.map((item, index) => (
+          <motion.div
+            className="analysis-item"
+            key={item}
+            initial={{ opacity: 0, x: -16 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ ...motionTokens.fastHover, delay: 0.38 + index * 0.08 }}
+          >
+            <Check size={17} />
+            <span>{item}</span>
+          </motion.div>
+        ))}
+      </motion.div>
+
+      <motion.div
+        className="dashboard-board"
+        initial={{ opacity: 0, y: 46, rotate: -1.4, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, rotate: -1.4, scale: 1 }}
+        transition={{ ...motionTokens.page, delay: 0.06 }}
+      >
+        <div className="dashboard-heading">
+          <Sparkles size={42} />
+          <strong>Smart Prompt Optimization</strong>
+        </div>
+        <div className="prompt-flow">
+          <div className="prompt-glass-panel raw-panel">
+            <span>Raw Prompt</span>
+            <p>write a blog about productivity.</p>
+          </div>
+          <motion.div
+            className="flow-arrow"
+            animate={{ x: [0, 12, 0], opacity: [0.68, 1, 0.68] }}
+            transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            <ArrowRight size={58} />
+          </motion.div>
+          <div className="prompt-glass-panel optimized-panel">
+            <span>Optimized Prompt</span>
+            <p>Write a detailed, engaging, and SEO-friendly blog post about productivity. Include practical tips, real-life examples, and actionable insights.</p>
+            <div className="prompt-tags">
+              <i>Detailed</i>
+              <i>Engaging</i>
+              <i>SEO Friendly</i>
+              <i>Actionable</i>
+            </div>
+          </div>
+          <div className="score-panel">
+            <span>Prompt Score</span>
+            <div className="score-ring"><strong>92%</strong></div>
+            <small>Excellent</small>
+            {bars.map((width, index) => (
+              <div className="score-bar" key={width}>
+                <em>{['Clarity', 'Relevance', 'Specificity', 'Completeness'][index]}</em>
+                <b style={{ width: `${width}%` }} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+function HeroShowcaseCard() {
+  return (
+    <motion.div
+      className="hero-showcase-card"
+      initial={{ opacity: 0, x: 70, scale: 0.96 }}
+      animate={{ opacity: 1, x: 0, scale: 1 }}
+      transition={{ ...motionTokens.page, delay: 0.2 }}
+      whileHover={{ y: -8, scale: 1.015 }}
+    >
+      <MiniPromptWorkspace compact />
+    </motion.div>
+  );
+}
+
+function PromptMemoryCard() {
+  return (
+    <motion.div
+      className="memory-card"
+      initial={{ opacity: 0, x: 90, rotate: 3 }}
+      animate={{ opacity: 1, x: 0, rotate: 2 }}
+      transition={{ ...motionTokens.page, delay: 0.28 }}
+      whileHover={{ y: -8, rotate: 0 }}
+      aria-hidden="true"
+    >
+      <div className="hourglass">
+        <span>Past<br />Prompts</span>
+        <small>Better<br />Results</small>
+      </div>
+      <div className="memory-lines">
+        <b>My Best Prompts</b>
+        <i>Lead Generation Prompt</i>
+        <i>Product Launch Post</i>
+        <i>Newsletter Template</i>
+      </div>
+    </motion.div>
+  );
+}
+
+function MiniPromptWorkspace({ compact = false }) {
+  return (
+    <div className={`mini-workspace ${compact ? 'compact' : ''}`}>
+      <div className="mini-toolbar">
+        <span />
+        <span />
+        <span />
+        <b>Prompt Studio</b>
+      </div>
+      <div className="mini-grid">
+        <div className="mini-editor">
+          <small>Raw Prompt</small>
+          <p>write a blog about productivity</p>
+        </div>
+        <ArrowRight size={compact ? 28 : 36} />
+        <div className="mini-editor highlighted">
+          <small>Optimized Prompt</small>
+          <p>Create a structured, practical productivity article with examples, tone, and CTA.</p>
+        </div>
+        <div className="mini-score">
+          <strong>92%</strong>
+          <span>Prompt Score</span>
+        </div>
+      </div>
+      <div className="mini-footer">
+        <span>Saves Time</span>
+        <span>Better Accuracy</span>
+        <span>Higher Productivity</span>
+      </div>
+    </div>
   );
 }
 
